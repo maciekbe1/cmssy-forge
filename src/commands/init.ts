@@ -12,6 +12,7 @@ interface InitOptions {
 interface InitAnswers {
   projectName: string;
   framework: string;
+  useTailwind: boolean;
   authorName: string;
   authorEmail: string;
   initGit: boolean;
@@ -43,6 +44,12 @@ export async function initCommand(name?: string, options?: InitOptions) {
         { name: "Vanilla JS", value: "vanilla" },
       ],
       default: options?.framework || "react",
+    },
+    {
+      type: "confirm",
+      name: "useTailwind",
+      message: "Use Tailwind CSS v4?",
+      default: true,
     },
     {
       type: "input",
@@ -124,6 +131,17 @@ export async function initCommand(name?: string, options?: InitOptions) {
       },
     };
 
+    // Add Tailwind CSS v4 if selected
+    if (answers.useTailwind) {
+      packageJson.devDependencies = {
+        ...packageJson.devDependencies,
+        tailwindcss: "^4.0.0",
+        "@tailwindcss/postcss": "^4.0.0",
+        postcss: "^8.4.49",
+        "postcss-cli": "^11.0.0",
+      };
+    }
+
     // Add framework-specific dependencies
     if (answers.framework === "react") {
       packageJson.dependencies = {
@@ -181,6 +199,17 @@ public/
 .blockforge/cache/
 `;
     fs.writeFileSync(path.join(projectPath, ".gitignore"), gitignore);
+
+    // Create postcss.config.js for Tailwind v4 if selected
+    if (answers.useTailwind) {
+      const postcssConfig = `export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};
+`;
+      fs.writeFileSync(path.join(projectPath, "postcss.config.js"), postcssConfig);
+    }
 
     // Create .env.example
     const envExample = `# Cmssy API Configuration
@@ -310,8 +339,9 @@ For more information, visit: https://cmssy.io/docs
     fs.mkdirSync(path.join(exampleBlockPath, "src"), { recursive: true });
 
     if (answers.framework === "react") {
-      // Create React example
-      const heroComponent = `interface HeroContent {
+      // Create React example with or without Tailwind
+      const heroComponent = answers.useTailwind
+        ? `interface HeroContent {
   heading?: string;
   subheading?: string;
   ctaText?: string;
@@ -324,7 +354,42 @@ interface HeroProps {
 
 export default function Hero({ content }: HeroProps) {
   const {
-    heading = 'Welcome to BlockForge',
+    heading = 'Welcome to Cmssy Forge',
+    subheading = 'Build reusable UI blocks with any framework',
+    ctaText = 'Get Started',
+    ctaUrl = '#',
+  } = content;
+
+  return (
+    <section className="flex items-center justify-center min-h-[400px] p-8 bg-gradient-to-br from-purple-600 to-purple-900 text-white text-center">
+      <div className="max-w-3xl">
+        <h1 className="text-5xl font-bold mb-4">{heading}</h1>
+        <p className="text-xl mb-8 opacity-90">{subheading}</p>
+        <a
+          href={ctaUrl}
+          className="inline-block px-8 py-4 bg-white text-purple-600 rounded-lg font-semibold hover:scale-105 transition-transform"
+        >
+          {ctaText}
+        </a>
+      </div>
+    </section>
+  );
+}
+`
+        : `interface HeroContent {
+  heading?: string;
+  subheading?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+}
+
+interface HeroProps {
+  content: HeroContent;
+}
+
+export default function Hero({ content }: HeroProps) {
+  const {
+    heading = 'Welcome to Cmssy Forge',
     subheading = 'Build reusable UI blocks with any framework',
     ctaText = 'Get Started',
     ctaUrl = '#',
@@ -375,7 +440,10 @@ export default {
       );
     }
 
-    const cssFile = `.hero {
+    const cssFile = answers.useTailwind
+      ? `@import "tailwindcss";
+`
+      : `.hero {
   display: flex;
   align-items: center;
   justify-content: center;

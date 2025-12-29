@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import chokidar from "chokidar";
 import { build } from "esbuild";
+import { execSync } from "child_process";
 import express from "express";
 import fs from "fs-extra";
 import ora from "ora";
@@ -262,14 +263,36 @@ async function buildResource(resource: Resource, config: any, outDir: string) {
       external: [],
     });
 
-    // Copy CSS if exists
+    // Process CSS with PostCSS if exists
     const cssPath = path.join(srcPath, "index.css");
     if (fs.existsSync(cssPath)) {
       const outCssFile = path.join(
         outDir,
         `${resource.type}.${resource.name}.css`
       );
-      fs.copyFileSync(cssPath, outCssFile);
+
+      // Check if postcss.config.js exists (Tailwind enabled)
+      const postcssConfigPath = path.join(process.cwd(), "postcss.config.js");
+
+      if (fs.existsSync(postcssConfigPath)) {
+        // Use PostCSS to process CSS (includes Tailwind)
+        try {
+          execSync(`npx postcss "${cssPath}" -o "${outCssFile}"`, {
+            stdio: "ignore",
+            cwd: process.cwd(),
+          });
+        } catch (error) {
+          console.warn(
+            chalk.yellow(
+              `Warning: PostCSS processing failed for ${resource.name}, copying CSS as-is`
+            )
+          );
+          fs.copyFileSync(cssPath, outCssFile);
+        }
+      } else {
+        // No PostCSS config - just copy CSS
+        fs.copyFileSync(cssPath, outCssFile);
+      }
     }
   } catch (error) {
     console.error(chalk.red(`Build error for ${resource.name}:`), error);

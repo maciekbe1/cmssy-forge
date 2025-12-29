@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { build as esbuild } from "esbuild";
+import { execSync } from "child_process";
 import fs from "fs-extra";
 import ora from "ora";
 import path from "path";
@@ -179,11 +180,29 @@ async function buildResource(
     external: [],
   });
 
-  // Copy CSS if exists
+  // Process CSS with PostCSS if exists
   const cssPath = path.join(srcPath, "index.css");
   if (fs.existsSync(cssPath)) {
     const outCssFile = path.join(destDir, "index.css");
-    fs.copyFileSync(cssPath, outCssFile);
+
+    // Check if postcss.config.js exists (Tailwind enabled)
+    const postcssConfigPath = path.join(process.cwd(), "postcss.config.js");
+
+    if (fs.existsSync(postcssConfigPath)) {
+      // Use PostCSS to process CSS (includes Tailwind)
+      try {
+        execSync(
+          `npx postcss "${cssPath}" -o "${outCssFile}"${config.build?.minify ? " --no-map" : ""}`,
+          { stdio: "ignore", cwd: process.cwd() }
+        );
+      } catch (error) {
+        console.warn(chalk.yellow(`Warning: PostCSS processing failed, copying CSS as-is`));
+        fs.copyFileSync(cssPath, outCssFile);
+      }
+    } else {
+      // No PostCSS config - just copy CSS
+      fs.copyFileSync(cssPath, outCssFile);
+    }
   }
 
   // Copy package.json for metadata

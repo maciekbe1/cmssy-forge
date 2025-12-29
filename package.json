@@ -1,6 +1,6 @@
 {
   "name": "cmssy-forge",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Unified CLI for building and publishing blocks to Cmssy marketplace",
   "type": "module",
   "bin": {
@@ -50,7 +50,8 @@
     "graphql-request": "^7.1.2",
     "inquirer": "^10.0.0",
     "node-fetch": "^3.3.2",
-    "ora": "^8.0.1"
+    "ora": "^8.0.1",
+    "postcss": "^8.4.49"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
