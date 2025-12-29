@@ -88,7 +88,7 @@ export async function initCommand(name?: string, options?: InitOptions) {
     fs.mkdirSync(projectPath, { recursive: true });
 
     // Create directory structure
-    const dirs = ["blocks", "templates", "public", ".blockforge"];
+    const dirs = ["blocks", "templates", "public", ".cmssy"];
 
     dirs.forEach((dir) => {
       fs.mkdirSync(path.join(projectPath, dir), { recursive: true });
@@ -196,7 +196,7 @@ public/
 .env
 .DS_Store
 *.log
-.blockforge/cache/
+.cmssy/cache/
 `;
     fs.writeFileSync(path.join(projectPath, ".gitignore"), gitignore);
 
@@ -494,7 +494,7 @@ export default {
         name: answers.authorName,
         email: answers.authorEmail,
       },
-      blockforge: {
+      cmssy: {
         packageType: "block",
         displayName: "Hero Section",
         category: "marketing",

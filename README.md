@@ -194,14 +194,14 @@ my-blocks/
 
 ## Block Metadata
 
-Each block requires a `blockforge` section in its `package.json`:
+Each block requires a `cmssy` section in its `package.json`:
 
 ```json
 {
   "name": "@vendor/blocks.hero",
   "version": "1.0.0",
   "description": "Hero section block",
-  "blockforge": {
+  "cmssy": {
     "packageType": "block",
     "displayName": "Hero Section",
     "category": "marketing",

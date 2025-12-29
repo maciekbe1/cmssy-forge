@@ -130,7 +130,7 @@ export default {
       version: "1.0.0",
       description: answers.description,
       author: config.author,
-      blockforge: {
+      cmssy: {
         packageType: "block",
         displayName: answers.displayName,
         category: answers.category,
@@ -294,7 +294,7 @@ export default {
       version: "1.0.0",
       description: answers.description,
       author: config.author,
-      blockforge: {
+      cmssy: {
         packageType: "template",
         displayName: answers.displayName,
         category: "pages",

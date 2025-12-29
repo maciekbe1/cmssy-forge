@@ -125,7 +125,7 @@ async function scanPackages(options: DeployOptions): Promise<PackageInfo[]> {
       if (!fs.existsSync(pkgPath)) continue;
 
       const packageJson = fs.readJsonSync(pkgPath);
-      if (!packageJson.blockforge) continue;
+      if (!packageJson.cmssy) continue;
 
       packages.push({
         type: "block",
@@ -159,7 +159,7 @@ async function scanPackages(options: DeployOptions): Promise<PackageInfo[]> {
       if (!fs.existsSync(pkgPath)) continue;
 
       const packageJson = fs.readJsonSync(pkgPath);
-      if (!packageJson.blockforge) continue;
+      if (!packageJson.cmssy) continue;
 
       packages.push({
         type: "template",
@@ -269,7 +269,7 @@ async function deployPackage(
   apiUrl: string
 ): Promise<void> {
   const { packageJson } = pkg;
-  const metadata = packageJson.blockforge;
+  const metadata = packageJson.cmssy;
 
   // Find built files in public/ directory
   const publicDir = path.join(process.cwd(), "public");
@@ -281,7 +281,7 @@ async function deployPackage(
 
   if (!fs.existsSync(packagePublicPath)) {
     throw new Error(
-      `Build output not found at ${packagePublicPath}. Run: blockforge build`
+      `Build output not found at ${packagePublicPath}. Run: cmssy build`
     );
   }
 

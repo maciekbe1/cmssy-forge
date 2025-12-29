@@ -35,7 +35,7 @@ export async function devCommand(options: DevOptions) {
     if (resources.length === 0) {
       spinner.warn("No blocks or templates found");
       console.log(chalk.yellow("\nCreate your first block:\n"));
-      console.log(chalk.white("  npx blockforge create block my-block\n"));
+      console.log(chalk.white("  npx cmssy create block my-block\n"));
       process.exit(0);
     }
 
@@ -69,7 +69,7 @@ export async function devCommand(options: DevOptions) {
     // Serve static files
     app.use(
       "/assets",
-      express.static(path.join(process.cwd(), ".blockforge", "dev"))
+      express.static(path.join(process.cwd(), ".cmssy", "dev"))
     );
 
     // API endpoint to list resources
@@ -189,20 +189,20 @@ async function scanResources(): Promise<Resource[]> {
       const blockPath = path.join(blocksDir, blockName);
       const pkg = getPackageJson(blockPath);
 
-      if (!pkg || !pkg.blockforge) continue;
+      if (!pkg || !pkg.cmssy) continue;
 
       const previewPath = path.join(blockPath, "preview.json");
       const previewData = fs.existsSync(previewPath)
         ? fs.readJsonSync(previewPath)
-        : pkg.blockforge.defaultContent || {};
+        : pkg.cmssy.defaultContent || {};
 
       resources.push({
         type: "block",
         name: blockName,
         path: blockPath,
-        displayName: pkg.blockforge.displayName || blockName,
+        displayName: pkg.cmssy.displayName || blockName,
         description: pkg.description,
-        category: pkg.blockforge.category,
+        category: pkg.cmssy.category,
         previewData,
       });
     }
@@ -220,20 +220,20 @@ async function scanResources(): Promise<Resource[]> {
       const templatePath = path.join(templatesDir, templateName);
       const pkg = getPackageJson(templatePath);
 
-      if (!pkg || !pkg.blockforge) continue;
+      if (!pkg || !pkg.cmssy) continue;
 
       const previewPath = path.join(templatePath, "preview.json");
       const previewData = fs.existsSync(previewPath)
         ? fs.readJsonSync(previewPath)
-        : pkg.blockforge.defaultContent || {};
+        : pkg.cmssy.defaultContent || {};
 
       resources.push({
         type: "template",
         name: templateName,
         path: templatePath,
-        displayName: pkg.blockforge.displayName || templateName,
+        displayName: pkg.cmssy.displayName || templateName,
         description: pkg.description,
-        category: pkg.blockforge.category,
+        category: pkg.cmssy.category,
         previewData,
       });
     }
@@ -243,7 +243,7 @@ async function scanResources(): Promise<Resource[]> {
 }
 
 async function buildAllResources(resources: Resource[], config: any) {
-  const devDir = path.join(process.cwd(), ".blockforge", "dev");
+  const devDir = path.join(process.cwd(), ".cmssy", "dev");
   fs.ensureDirSync(devDir);
 
   for (const resource of resources) {
@@ -318,7 +318,7 @@ async function buildResource(resource: Resource, config: any, outDir: string) {
 }
 
 function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
-  const devDir = path.join(process.cwd(), ".blockforge", "dev");
+  const devDir = path.join(process.cwd(), ".cmssy", "dev");
 
   // Watch directories directly instead of globs (globs don't work reliably in chokidar)
   const watchPaths: string[] = [];
@@ -493,7 +493,7 @@ function generateIndexHTML(resources: Resource[]): string {
         </div>
       </div>
     `
-        : '<div class="empty">No blocks found. Create one with: <code>npx blockforge create block my-block</code></div>'
+        : '<div class="empty">No blocks found. Create one with: <code>npx cmssy create block my-block</code></div>'
     }
 
     ${

@@ -215,8 +215,8 @@ async function syncPackage(pkg: any): Promise<void> {
     }
   }
 
-  // Add blockforge metadata
-  packageJsonData.blockforge = {
+  // Add cmssy metadata
+  packageJsonData.cmssy = {
     packageType,
     displayName,
     schemaFields: currentVersion.schemaFields || [],

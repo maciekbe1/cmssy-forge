@@ -90,10 +90,10 @@ async function scanResources(): Promise<Resource[]> {
       const blockPath = path.join(blocksDir, blockName);
       const pkg = getPackageJson(blockPath);
 
-      if (!pkg || !pkg.blockforge) {
+      if (!pkg || !pkg.cmssy) {
         console.warn(
           chalk.yellow(
-            `Warning: Skipping ${blockName} - no blockforge metadata`
+            `Warning: Skipping ${blockName} - no cmssy metadata`
           )
         );
         continue;
@@ -120,10 +120,10 @@ async function scanResources(): Promise<Resource[]> {
       const templatePath = path.join(templatesDir, templateName);
       const pkg = getPackageJson(templatePath);
 
-      if (!pkg || !pkg.blockforge) {
+      if (!pkg || !pkg.cmssy) {
         console.warn(
           chalk.yellow(
-            `Warning: Skipping ${templateName} - no blockforge metadata`
+            `Warning: Skipping ${templateName} - no cmssy metadata`
           )
         );
         continue;
