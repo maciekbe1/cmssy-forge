@@ -1,10 +1,11 @@
 {
-  "name": "cmssy-forge",
-  "version": "0.3.2",
+  "name": "cmssy-cli",
+  "version": "0.4.0",
   "description": "Unified CLI for building and publishing blocks to Cmssy marketplace",
   "type": "module",
   "bin": {
-    "cmssy-forge": "./dist/cli.js"
+    "cmssy": "./dist/cli.js",
+    "cmssy-cli": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -22,11 +23,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maciekbe1/cmssy-forge.git"
+    "url": "https://github.com/maciekbe1/cmssy-cli.git"
   },
-  "homepage": "https://github.com/maciekbe1/cmssy-forge#readme",
+  "homepage": "https://github.com/maciekbe1/cmssy-cli#readme",
   "bugs": {
-    "url": "https://github.com/maciekbe1/cmssy-forge/issues"
+    "url": "https://github.com/maciekbe1/cmssy-cli/issues"
   },
   "files": [
     "dist",

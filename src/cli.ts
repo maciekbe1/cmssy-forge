@@ -12,16 +12,16 @@ import { syncCommand } from "./commands/sync.js";
 const program = new Command();
 
 program
-  .name("cmssy-forge")
+  .name("cmssy")
   .description(
     "Unified CLI for building and publishing blocks to Cmssy marketplace"
   )
-  .version("0.3.1");
+  .version("0.4.0");
 
-// cmssy-forge init
+// cmssy init
 program
   .command("init")
-  .description("Initialize a new BlockForge project")
+  .description("Initialize a new Cmssy project")
   .argument("[name]", "Project name")
   .option(
     "-f, --framework <framework>",
@@ -30,7 +30,7 @@ program
   )
   .action(initCommand);
 
-// cmssy-forge create
+// cmssy create
 const create = program
   .command("create")
   .description("Create a new block or template");
@@ -47,28 +47,28 @@ create
   .argument("<name>", "Template name")
   .action(createCommand.page);
 
-// cmssy-forge build
+// cmssy build
 program
   .command("build")
   .description("Build all blocks and templates")
   .option("--framework <framework>", "Framework to use")
   .action(buildCommand);
 
-// cmssy-forge dev
+// cmssy dev
 program
   .command("dev")
   .description("Start development server with preview")
   .option("-p, --port <port>", "Port number", "3000")
   .action(devCommand);
 
-// cmssy-forge configure
+// cmssy configure
 program
   .command("configure")
   .description("Configure Cmssy API credentials")
   .option("--api-url <url>", "Cmssy API URL", "https://api.cmssy.io/graphql")
   .action(configureCommand);
 
-// cmssy-forge deploy
+// cmssy deploy
 program
   .command("deploy")
   .description("Publish blocks/templates to Cmssy marketplace")
@@ -78,7 +78,7 @@ program
   .option("--dry-run", "Preview what would be deployed without publishing")
   .action(deployCommand);
 
-// cmssy-forge sync
+// cmssy sync
 program
   .command("sync")
   .description("Pull blocks from Cmssy marketplace to local project")

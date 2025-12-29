@@ -1,18 +1,18 @@
-# cmssy-forge
+# cmssy-cli
 
 Unified CLI for building reusable UI blocks and publishing them to Cmssy Marketplace.
 
 ## Installation
 
 ```bash
-npm install -g cmssy-forge
+npm install -g cmssy-cli
 ```
 
 ## Quick Start
 
 ```bash
 # 1. Create a new project
-npx cmssy-forge init my-blocks
+npx cmssy init my-blocks
 
 # 2. Navigate to project
 cd my-blocks
@@ -24,16 +24,16 @@ npm install
 npm run dev
 
 # 5. Create a new block
-npx cmssy-forge create block my-block
+npx cmssy create block my-block
 
 # 6. Build for production
 npm run build
 
 # 7. Configure Cmssy API (for publishing)
-npx cmssy-forge configure
+npx cmssy configure
 
 # 8. Deploy to marketplace
-npx cmssy-forge deploy --all
+npx cmssy deploy --all
 ```
 
 ## Commands
@@ -41,38 +41,38 @@ npx cmssy-forge deploy --all
 ### Initialize Project
 
 ```bash
-cmssy-forge init [name] [options]
+cmssy init [name] [options]
 ```
 
-Create a new BlockForge project with example blocks.
+Create a new Cmssy project with example blocks.
 
 **Options:**
 - `-f, --framework <framework>` - Framework (react, vue, angular, vanilla). Default: react
 
 **Example:**
 ```bash
-cmssy-forge init my-blocks --framework react
+cmssy init my-blocks --framework react
 ```
 
 ### Create Block or Template
 
 ```bash
-cmssy-forge create block <name>
-cmssy-forge create template <name>
+cmssy create block <name>
+cmssy create template <name>
 ```
 
 Create a new block or page template in your project.
 
 **Example:**
 ```bash
-cmssy-forge create block hero
-cmssy-forge create template landing-page
+cmssy create block hero
+cmssy create template landing-page
 ```
 
 ### Build
 
 ```bash
-cmssy-forge build [options]
+cmssy build [options]
 ```
 
 Build all blocks and templates for production.
@@ -82,7 +82,7 @@ Build all blocks and templates for production.
 
 **Example:**
 ```bash
-cmssy-forge build
+cmssy build
 ```
 
 **Output:** Built files are generated in `public/@vendor/package-name/version/` directory.
@@ -90,7 +90,7 @@ cmssy-forge build
 ### Development Server
 
 ```bash
-cmssy-forge dev [options]
+cmssy dev [options]
 ```
 
 Start development server with hot reload and preview.
@@ -100,13 +100,13 @@ Start development server with hot reload and preview.
 
 **Example:**
 ```bash
-cmssy-forge dev --port 4000
+cmssy dev --port 4000
 ```
 
 ### Configure API
 
 ```bash
-cmssy-forge configure [options]
+cmssy configure [options]
 ```
 
 Configure Cmssy API credentials for publishing.
@@ -116,7 +116,7 @@ Configure Cmssy API credentials for publishing.
 
 **Example:**
 ```bash
-cmssy-forge configure
+cmssy configure
 ```
 
 You'll be prompted for:
@@ -128,7 +128,7 @@ Create an API token with `marketplace:publish` scope.
 ### Deploy to Marketplace
 
 ```bash
-cmssy-forge deploy [options]
+cmssy deploy [options]
 ```
 
 Publish blocks/templates to Cmssy marketplace.
@@ -142,22 +142,22 @@ Publish blocks/templates to Cmssy marketplace.
 **Example:**
 ```bash
 # Deploy all
-cmssy-forge deploy --all
+cmssy deploy --all
 
 # Deploy specific blocks
-cmssy-forge deploy --blocks hero pricing
+cmssy deploy --blocks hero pricing
 
 # Deploy specific templates
-cmssy-forge deploy --templates landing-page
+cmssy deploy --templates landing-page
 
 # Dry run
-cmssy-forge deploy --all --dry-run
+cmssy deploy --all --dry-run
 ```
 
 ### Sync from Marketplace
 
 ```bash
-cmssy-forge sync [package] [options]
+cmssy sync [package] [options]
 ```
 
 Pull blocks from Cmssy marketplace to local project.
@@ -167,7 +167,7 @@ Pull blocks from Cmssy marketplace to local project.
 
 **Example:**
 ```bash
-cmssy-forge sync @vendor/blocks.hero --workspace abc123
+cmssy sync @vendor/blocks.hero --workspace abc123
 ```
 
 ## Project Structure
@@ -221,12 +221,12 @@ Each block requires a `blockforge` section in its `package.json`:
 
 ## Complete Workflow
 
-1. **Initialize**: `cmssy-forge init my-blocks`
-2. **Develop**: `cmssy-forge dev` (hot reload + preview)
-3. **Create**: `cmssy-forge create block my-block`
-4. **Build**: `cmssy-forge build`
-5. **Configure**: `cmssy-forge configure` (one-time)
-6. **Deploy**: `cmssy-forge deploy --all`
+1. **Initialize**: `cmssy init my-blocks`
+2. **Develop**: `cmssy dev` (hot reload + preview)
+3. **Create**: `cmssy create block my-block`
+4. **Build**: `cmssy build`
+5. **Configure**: `cmssy configure` (one-time)
+6. **Deploy**: `cmssy deploy --all`
 7. **Review**: Your packages are submitted for Cmssy review
 8. **Publish**: Once approved, they're available in the marketplace
 

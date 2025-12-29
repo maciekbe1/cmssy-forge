@@ -19,7 +19,7 @@ interface InitAnswers {
 }
 
 export async function initCommand(name?: string, options?: InitOptions) {
-  console.log(chalk.blue.bold("\n🔨 BlockForge - Initialize Project\n"));
+  console.log(chalk.blue.bold("\n🔨 Cmssy - Initialize Project\n"));
 
   const answers = await inquirer.prompt<InitAnswers>([
     {
@@ -122,12 +122,12 @@ export async function initCommand(name?: string, options?: InitOptions) {
       version: "1.0.0",
       type: "module",
       scripts: {
-        dev: "cmssy-forge dev -p 3000",
-        build: "cmssy-forge build",
+        dev: "cmssy dev -p 3000",
+        build: "cmssy build",
       },
       dependencies: {},
       devDependencies: {
-        "cmssy-forge": "^0.2.0",
+        "cmssy-cli": "^0.4.0",
       },
     };
 
@@ -213,7 +213,7 @@ public/
 
     // Create .env.example
     const envExample = `# Cmssy API Configuration
-# Run 'cmssy-forge configure' to set these values
+# Run 'cmssy configure' to set these values
 
 # Cmssy GraphQL API URL
 CMSSY_API_URL=https://api.cmssy.io/graphql
@@ -227,7 +227,7 @@ CMSSY_API_TOKEN=
     // Create README.md
     const readme = `# ${answers.projectName}
 
-Cmssy Forge project for building reusable UI blocks and templates.
+Cmssy project for building reusable UI blocks and templates.
 
 ## Getting Started
 
@@ -242,7 +242,7 @@ npm run dev
 npm run dev -- -p 3002
 
 # Create a new block
-cmssy-forge create block my-block
+cmssy create block my-block
 
 # Build for production
 npm run build
@@ -256,10 +256,10 @@ npm run build
 npm run dev
 
 # Create a new block
-cmssy-forge create block <name>
+cmssy create block <name>
 
 # Create a new page template
-cmssy-forge create template <name>
+cmssy create template <name>
 
 # Build all blocks and templates (uses npm script)
 npm run build
@@ -268,28 +268,28 @@ npm run build
 ### Publishing to Cmssy Marketplace
 \`\`\`bash
 # Configure API credentials (run once)
-cmssy-forge configure
+cmssy configure
 
 # Deploy all blocks and templates
-cmssy-forge deploy --all
+cmssy deploy --all
 
 # Deploy specific blocks
-cmssy-forge deploy --blocks hero pricing
+cmssy deploy --blocks hero pricing
 
 # Deploy specific templates
-cmssy-forge deploy --templates landing
+cmssy deploy --templates landing
 
 # Preview what would be deployed
-cmssy-forge deploy --all --dry-run
+cmssy deploy --all --dry-run
 \`\`\`
 
 ### Syncing from Marketplace
 \`\`\`bash
 # Pull a specific block from marketplace
-cmssy-forge sync @vendor/blocks.hero --workspace YOUR_WORKSPACE_ID
+cmssy sync @vendor/blocks.hero --workspace YOUR_WORKSPACE_ID
 
 # Pull all installed packages
-cmssy-forge sync --workspace YOUR_WORKSPACE_ID
+cmssy sync --workspace YOUR_WORKSPACE_ID
 \`\`\`
 
 ## Project Structure
@@ -357,7 +357,7 @@ interface HeroProps {
 
 export default function Hero({ content }: HeroProps) {
   const {
-    heading = 'Welcome to Cmssy Forge',
+    heading = 'Welcome to Cmssy',
     subheading = 'Build reusable UI blocks with any framework',
     ctaText = 'Get Started',
     ctaUrl = '#',
@@ -392,7 +392,7 @@ interface HeroProps {
 
 export default function Hero({ content }: HeroProps) {
   const {
-    heading = 'Welcome to Cmssy Forge',
+    heading = 'Welcome to Cmssy',
     subheading = 'Build reusable UI blocks with any framework',
     ctaText = 'Get Started',
     ctaUrl = '#',
@@ -508,7 +508,7 @@ export default {
             type: "text",
             label: "Main Heading",
             required: true,
-            placeholder: "Welcome to BlockForge",
+            placeholder: "Welcome to Cmssy",
           },
           {
             key: "subheading",
@@ -530,7 +530,7 @@ export default {
           },
         ],
         defaultContent: {
-          heading: "Welcome to BlockForge",
+          heading: "Welcome to Cmssy",
           subheading: "Build reusable UI blocks with any framework",
           ctaText: "Get Started",
           ctaUrl: "#",
@@ -545,7 +545,7 @@ export default {
 
     // Create preview.json for dev server
     const previewData = {
-      heading: "Welcome to BlockForge",
+      heading: "Welcome to Cmssy",
       subheading: "Build reusable UI blocks with any framework",
       ctaText: "Get Started",
       ctaUrl: "#",

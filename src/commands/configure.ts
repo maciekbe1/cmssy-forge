@@ -7,7 +7,7 @@ interface ConfigureOptions {
 }
 
 export async function configureCommand(options: ConfigureOptions) {
-  console.log(chalk.blue.bold("\n🔨 Cmssy Forge - Configure\n"));
+  console.log(chalk.blue.bold("\n🔨 Cmssy - Configure\n"));
 
   const existingConfig = loadConfig();
 
@@ -47,9 +47,9 @@ export async function configureCommand(options: ConfigureOptions) {
   console.log(chalk.green("\n✓ Configuration saved to .env\n"));
   console.log(chalk.cyan("Next steps:\n"));
   console.log(
-    chalk.white("  cmssy-forge deploy      # Publish to marketplace")
+    chalk.white("  cmssy deploy      # Publish to marketplace")
   );
   console.log(
-    chalk.white("  cmssy-forge sync        # Pull blocks from Cmssy\n")
+    chalk.white("  cmssy sync        # Pull blocks from Cmssy\n")
   );
 }

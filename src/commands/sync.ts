@@ -40,21 +40,21 @@ export async function syncCommand(
   packageSlug: string | undefined,
   options: SyncOptions
 ) {
-  console.log(chalk.blue.bold("\n🔨 Cmssy Forge - Sync Blocks\n"));
+  console.log(chalk.blue.bold("\n🔨 Cmssy - Sync Blocks\n"));
 
   // Check configuration
   if (!hasConfig()) {
-    console.error(chalk.red("✖ Not configured. Run: cmssy-forge configure\n"));
+    console.error(chalk.red("✖ Not configured. Run: cmssy configure\n"));
     process.exit(1);
   }
 
   const config = loadConfig();
 
-  // Check if we're in a cmssy-forge project
+  // Check if we're in a cmssy project
   const configPath = path.join(process.cwd(), "cmssy.config.js");
   if (!fs.existsSync(configPath)) {
     console.error(
-      chalk.red("✖ Not a cmssy-forge project (missing cmssy.config.js)\n")
+      chalk.red("✖ Not a cmssy project (missing cmssy.config.js)\n")
     );
     process.exit(1);
   }

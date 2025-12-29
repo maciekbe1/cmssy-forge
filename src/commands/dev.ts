@@ -113,7 +113,7 @@ export async function devCommand(options: DevOptions) {
         chalk.green.bold("\n┌─────────────────────────────────────────┐")
       );
       console.log(
-        chalk.green.bold("│   BlockForge Dev Server                 │")
+        chalk.green.bold("│   Cmssy Dev Server                      │")
       );
       console.log(
         chalk.green.bold("├─────────────────────────────────────────┤")
@@ -404,7 +404,7 @@ function generateIndexHTML(resources: Resource[]): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BlockForge Dev Server</title>
+  <title>Cmssy Dev Server</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -459,7 +459,7 @@ function generateIndexHTML(resources: Resource[]): string {
 </head>
 <body>
   <div class="container">
-    <h1>🔨 BlockForge</h1>
+    <h1>🔨 Cmssy</h1>
     <p class="subtitle">Development Server</p>
 
     ${

@@ -22,11 +22,11 @@ interface PackageInfo {
 }
 
 export async function deployCommand(options: DeployOptions) {
-  console.log(chalk.blue.bold("\n🔨 Cmssy Forge - Deploy to Marketplace\n"));
+  console.log(chalk.blue.bold("\n🔨 Cmssy - Deploy to Marketplace\n"));
 
   // Check configuration
   if (!hasConfig()) {
-    console.error(chalk.red("✖ Not configured. Run: cmssy-forge configure\n"));
+    console.error(chalk.red("✖ Not configured. Run: cmssy configure\n"));
     process.exit(1);
   }
 
@@ -36,7 +36,7 @@ export async function deployCommand(options: DeployOptions) {
   const configPath = path.join(process.cwd(), "cmssy.config.js");
   if (!fs.existsSync(configPath)) {
     console.error(
-      chalk.red("✖ Not a cmssy-forge project (missing cmssy.config.js)\n")
+      chalk.red("✖ Not a cmssy project (missing cmssy.config.js)\n")
     );
     process.exit(1);
   }
