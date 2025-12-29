@@ -262,18 +262,22 @@ export default function Hero({ content }: HeroProps) {
       fs.writeFileSync(path.join(exampleBlockPath, 'src', 'Hero.tsx'), heroComponent);
 
       const indexFile = `import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, Root } from 'react-dom/client';
 import Hero from './Hero';
 import './index.css';
 
+interface BlockContext {
+  root: Root;
+}
+
 export default {
-  mount(element, props) {
+  mount(element: HTMLElement, props: any): BlockContext {
     const root = createRoot(element);
     root.render(<Hero content={props} />);
     return { root };
   },
 
-  unmount(_element, ctx) {
+  unmount(_element: HTMLElement, ctx: BlockContext): void {
     ctx.root.unmount();
   }
 };
