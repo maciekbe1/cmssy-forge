@@ -130,13 +130,13 @@ export async function initCommand(name?: string, options?: InitOptions) {
     // Add framework-specific dependencies
     if (answers.framework === 'react') {
       packageJson.dependencies = {
-        react: '^18.3.1',
-        'react-dom': '^18.3.1',
+        react: '^19.2.3',
+        'react-dom': '^19.2.3',
       };
       packageJson.devDependencies = {
         ...packageJson.devDependencies,
         '@types/react': '^19.2.7',
-        '@types/react-dom': '^18.3.1',
+        '@types/react-dom': '^19',
         typescript: '^5.7.2',
       };
     }
