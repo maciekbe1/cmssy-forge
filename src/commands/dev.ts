@@ -890,9 +890,8 @@ async function executePublish(
     task.steps.push({ step: "validating", status: "in_progress", message: "Validating configuration..." });
     task.progress = 30;
 
-    // Execute cmssy publish command
-    const cliPath = path.join(process.cwd(), "node_modules", ".bin", "cmssy");
-    const command = `"${cliPath}" ${args.join(" ")}`;
+    // Execute cmssy publish command (use global CLI)
+    const command = `cmssy ${args.join(" ")}`;
 
     task.steps[task.steps.length - 1].status = "completed";
     task.steps.push({ step: "publishing", status: "in_progress", message: `Publishing to ${target}...` });
