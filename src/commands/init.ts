@@ -507,7 +507,6 @@ export default defineBlock({
     heading: {
       type: 'singleLine',
       label: 'Main Heading',
-      required: true,
       defaultValue: 'Welcome to Cmssy',
     },
     subheading: {
@@ -554,7 +553,6 @@ export default defineBlock({
       heading: {
         type: "singleLine" as const,
         label: "Main Heading",
-        required: true,
         defaultValue: "Welcome to Cmssy",
       },
       subheading: {
