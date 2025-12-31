@@ -56,6 +56,14 @@ CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011
 4. Copy the token to your `.env` file
 
 **How to get Workspace ID:**
+
+**Option 1: From Cmssy UI (Easiest)**
+1. Go to your workspace Settings → General
+2. Find "Workspace Information" section at the top
+3. Click the copy button next to Workspace ID
+4. Add to `.env` as `CMSSY_WORKSPACE_ID`
+
+**Option 2: Using CLI**
 1. Run `cmssy workspaces` to list all your workspaces
 2. Copy the ID (MongoDB ObjectId format: 24-character hex string)
 3. Add to `.env` as `CMSSY_WORKSPACE_ID`
@@ -612,10 +620,18 @@ cmssy upload --all --workspace 507f1f77bcf86cd799439011
 Run `cmssy configure` or manually add `CMSSY_API_TOKEN` to `.env`
 
 ### "Workspace ID required"
+**Option 1: From UI**
+1. Go to Workspace Settings → General
+2. Copy workspace ID using the copy button
+3. Add to `.env`: `CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011`
+
+**Option 2: From CLI**
 1. Run `cmssy workspaces` to list your workspaces
 2. Copy the workspace ID (24-character hex string like `507f1f77bcf86cd799439011`)
 3. Add to `.env`: `CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011`
-4. Or use `--workspace 507f1f77bcf86cd799439011` flag in commands
+
+**Option 3: Use flag**
+- Use `--workspace 507f1f77bcf86cd799439011` flag in commands
 
 ### "Specify publish target"
 Must use either `--marketplace` OR `--workspace` when publishing
