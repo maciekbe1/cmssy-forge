@@ -89,7 +89,7 @@ export async function devCommand(options: DevOptions) {
     const devUiPath = path.join(__dirname, "../dev-ui");
     app.use("/dev-ui", express.static(devUiPath));
 
-    // API: Get all blocks with schema
+    // API: Get all blocks with schema (including version and package name)
     app.get("/api/blocks", (_req, res) => {
       const blockList = resources.map((r) => ({
         type: r.type,
@@ -98,6 +98,8 @@ export async function devCommand(options: DevOptions) {
         description: r.description,
         category: r.category,
         schema: r.blockConfig?.schema || {},
+        version: r.packageJson?.version || "1.0.0",
+        packageName: r.packageJson?.name || `@local/${r.type}s.${r.name}`,
       }));
       res.json(blockList);
     });
@@ -142,6 +144,103 @@ export async function devCommand(options: DevOptions) {
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }
+    });
+
+    // Publish task tracking
+    const publishTasks = new Map<string, any>();
+
+    // API: Get block publish status
+    app.get("/api/blocks/:name/status", (req, res) => {
+      const { name } = req.params;
+      const resource = resources.find((r) => r.name === name);
+
+      if (!resource) {
+        res.status(404).json({ error: "Block not found" });
+        return;
+      }
+
+      res.json({
+        name: resource.name,
+        version: resource.packageJson?.version || "1.0.0",
+        packageName: resource.packageJson?.name || `@local/${resource.type}s.${resource.name}`,
+        published: false, // TODO: Check actual publish status from backend
+        lastPublished: null,
+      });
+    });
+
+    // API: Trigger publish
+    app.post("/api/blocks/:name/publish", async (req, res) => {
+      const { name } = req.params;
+      const { target, workspaceId, versionBump } = req.body;
+
+      const resource = resources.find((r) => r.name === name);
+
+      if (!resource) {
+        res.status(404).json({ error: "Block not found" });
+        return;
+      }
+
+      // Validate target
+      if (!target || (target !== "marketplace" && target !== "workspace")) {
+        res.status(400).json({ error: "Invalid target. Must be 'marketplace' or 'workspace'" });
+        return;
+      }
+
+      if (target === "workspace" && !workspaceId) {
+        res.status(400).json({ error: "Workspace ID required for workspace publish" });
+        return;
+      }
+
+      // Create task ID
+      const taskId = `publish-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Store task
+      publishTasks.set(taskId, {
+        id: taskId,
+        blockName: name,
+        status: "pending",
+        progress: 0,
+        steps: [],
+        error: null,
+      });
+
+      // Start async publish
+      executePublish(taskId, resource, target, workspaceId, versionBump, publishTasks);
+
+      res.json({ taskId, status: "started" });
+    });
+
+    // API: Get publish progress (SSE)
+    app.get("/api/publish/progress/:taskId", (req, res) => {
+      const { taskId } = req.params;
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      // Send initial state
+      const task = publishTasks.get(taskId);
+      if (task) {
+        res.write(`data: ${JSON.stringify(task)}\n\n`);
+      }
+
+      // Poll for updates every 500ms
+      const interval = setInterval(() => {
+        const task = publishTasks.get(taskId);
+        if (task) {
+          res.write(`data: ${JSON.stringify(task)}\n\n`);
+
+          // Close when done
+          if (task.status === "completed" || task.status === "failed") {
+            clearInterval(interval);
+            res.end();
+          }
+        }
+      }, 500);
+
+      req.on("close", () => {
+        clearInterval(interval);
+      });
     });
 
     // API endpoint to list resources (legacy)
@@ -712,6 +811,87 @@ function generateIndexHTML(resources: Resource[]): string {
 </body>
 </html>
   `;
+}
+
+// Execute publish command asynchronously
+async function executePublish(
+  taskId: string,
+  resource: Resource,
+  target: string,
+  workspaceId: string | undefined,
+  versionBump: string | undefined,
+  publishTasks: Map<string, any>
+) {
+  const task = publishTasks.get(taskId);
+  if (!task) return;
+
+  try {
+    // Update: Building
+    task.status = "building";
+    task.progress = 10;
+    task.steps.push({ step: "building", status: "in_progress", message: "Building block..." });
+
+    // Build command args
+    let args = ["publish", resource.name, `--${target}`];
+
+    if (target === "workspace" && workspaceId) {
+      args.push(workspaceId);
+    }
+
+    if (versionBump) {
+      args.push(`--${versionBump}`);
+    }
+
+    task.steps[task.steps.length - 1].status = "completed";
+    task.steps.push({ step: "validating", status: "in_progress", message: "Validating configuration..." });
+    task.progress = 30;
+
+    // Execute cmssy publish command
+    const cliPath = path.join(process.cwd(), "node_modules", ".bin", "cmssy");
+    const command = `"${cliPath}" ${args.join(" ")}`;
+
+    task.steps[task.steps.length - 1].status = "completed";
+    task.steps.push({ step: "publishing", status: "in_progress", message: `Publishing to ${target}...` });
+    task.progress = 50;
+
+    // Execute command
+    await new Promise<void>((resolve, reject) => {
+      const { exec } = require("child_process");
+      exec(command, {
+        cwd: process.cwd(),
+        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      }, (error: any, stdout: string, stderr: string) => {
+        if (error) {
+          reject(new Error(stderr || error.message));
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    task.steps[task.steps.length - 1].status = "completed";
+    task.progress = 100;
+    task.status = "completed";
+    task.steps.push({
+      step: "completed",
+      status: "completed",
+      message: target === "marketplace"
+        ? "Submitted for review. You'll be notified when approved."
+        : "Published to workspace successfully!"
+    });
+
+  } catch (error: any) {
+    task.status = "failed";
+    task.error = error.message;
+    if (task.steps.length > 0) {
+      task.steps[task.steps.length - 1].status = "failed";
+    }
+    task.steps.push({
+      step: "error",
+      status: "failed",
+      message: `Error: ${error.message}`
+    });
+  }
 }
 
 function generatePreviewHTML(resource: Resource, config: any): string {

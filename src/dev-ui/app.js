@@ -45,8 +45,14 @@ function renderBlocksList() {
       data-block="${block.name}"
       onclick="selectBlock('${block.name}')"
     >
-      <div class="block-item-name">${block.displayName || block.name}</div>
-      <div class="block-item-type">${block.type}</div>
+      <div class="block-item-header">
+        <div class="block-item-name">${block.displayName || block.name}</div>
+        <span class="version-badge">v${block.version || '1.0.0'}</span>
+      </div>
+      <div class="block-item-footer">
+        <span class="block-item-type">${block.type}</span>
+        <span class="status-badge status-local">Local</span>
+      </div>
     </div>
   `).join('');
 }
@@ -71,6 +77,12 @@ async function selectBlock(blockName) {
   // Update UI
   document.getElementById('preview-title').textContent = block.displayName || block.name;
   document.getElementById('editor-subtitle').textContent = block.name;
+
+  // Show publish button
+  const publishBtn = document.getElementById('publish-btn');
+  if (publishBtn) {
+    publishBtn.style.display = 'block';
+  }
 
   // Render preview
   renderPreview();
@@ -490,6 +502,155 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Publish functionality
+let publishTaskId = null;
+let publishEventSource = null;
+
+window.openPublishModal = function() {
+  if (!currentBlock) return;
+
+  const modal = document.getElementById('publish-modal');
+  const blockName = document.getElementById('publish-block-name');
+  const version = document.getElementById('publish-version');
+
+  blockName.textContent = currentBlock.displayName || currentBlock.name;
+  version.textContent = `v${currentBlock.version || '1.0.0'}`;
+
+  // Reset form
+  document.getElementById('publish-target-marketplace').checked = true;
+  document.getElementById('publish-workspace-id').value = '';
+  document.getElementById('publish-version-bump').value = '';
+
+  // Show/hide workspace input
+  toggleWorkspaceInput();
+
+  modal.classList.add('active');
+};
+
+window.closePublishModal = function() {
+  const modal = document.getElementById('publish-modal');
+  modal.classList.remove('active');
+};
+
+window.toggleWorkspaceInput = function() {
+  const target = document.querySelector('input[name="publish-target"]:checked').value;
+  const workspaceGroup = document.getElementById('workspace-id-group');
+
+  if (target === 'workspace') {
+    workspaceGroup.style.display = 'block';
+  } else {
+    workspaceGroup.style.display = 'none';
+  }
+};
+
+window.startPublish = async function() {
+  if (!currentBlock) return;
+
+  const target = document.querySelector('input[name="publish-target"]:checked').value;
+  const workspaceId = document.getElementById('publish-workspace-id').value;
+  const versionBump = document.getElementById('publish-version-bump').value;
+
+  // Validate workspace ID if needed
+  if (target === 'workspace' && !workspaceId) {
+    alert('Workspace ID is required for workspace publish');
+    return;
+  }
+
+  // Show progress UI, hide form
+  document.getElementById('publish-form').style.display = 'none';
+  document.getElementById('publish-progress').style.display = 'block';
+
+  try {
+    // Start publish
+    const response = await fetch(`/api/blocks/${currentBlock.name}/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target, workspaceId, versionBump })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to start publish');
+    }
+
+    const { taskId } = await response.json();
+    publishTaskId = taskId;
+
+    // Stream progress
+    streamPublishProgress(taskId);
+
+  } catch (error) {
+    console.error('Publish failed:', error);
+    showPublishError(error.message);
+  }
+};
+
+function streamPublishProgress(taskId) {
+  // Close existing connection
+  if (publishEventSource) {
+    publishEventSource.close();
+  }
+
+  publishEventSource = new EventSource(`/api/publish/progress/${taskId}`);
+
+  publishEventSource.onmessage = (event) => {
+    const task = JSON.parse(event.data);
+    updatePublishProgress(task);
+
+    // Close connection when done
+    if (task.status === 'completed' || task.status === 'failed') {
+      publishEventSource.close();
+      publishEventSource = null;
+    }
+  };
+
+  publishEventSource.onerror = () => {
+    console.error('SSE connection lost');
+    publishEventSource.close();
+    publishEventSource = null;
+  };
+}
+
+function updatePublishProgress(task) {
+  const progressBar = document.getElementById('publish-progress-bar');
+  const progressText = document.getElementById('publish-progress-text');
+  const stepsContainer = document.getElementById('publish-steps');
+
+  // Update progress bar
+  progressBar.style.width = `${task.progress}%`;
+  progressText.textContent = `${task.progress}%`;
+
+  // Update steps
+  stepsContainer.innerHTML = task.steps.map(step => `
+    <div class="progress-step ${step.status}">
+      <span class="step-icon">
+        ${step.status === 'completed' ? '✓' : step.status === 'failed' ? '✗' : '⏳'}
+      </span>
+      <span class="step-message">${step.message}</span>
+    </div>
+  `).join('');
+
+  // Handle completion
+  if (task.status === 'completed') {
+    document.getElementById('publish-close-btn').style.display = 'block';
+    document.getElementById('publish-close-btn').textContent = 'Done';
+  } else if (task.status === 'failed') {
+    document.getElementById('publish-close-btn').style.display = 'block';
+    document.getElementById('publish-close-btn').textContent = 'Close';
+  }
+}
+
+function showPublishError(message) {
+  const progressDiv = document.getElementById('publish-progress');
+  progressDiv.innerHTML = `
+    <div class="publish-error">
+      <div class="error-icon">✗</div>
+      <div class="error-message">${escapeHtml(message)}</div>
+      <button class="btn btn-secondary" onclick="closePublishModal()">Close</button>
+    </div>
+  `;
 }
 
 // Start the app

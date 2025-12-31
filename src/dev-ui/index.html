@@ -84,6 +84,46 @@
       opacity: 0.7;
     }
 
+    .block-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .block-item-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .version-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      background: #e3f2fd;
+      color: #1976d2;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .status-badge.status-local {
+      background: #fff3e0;
+      color: #e65100;
+    }
+
+    .status-badge.status-published {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
     /* Center Panel - Preview */
     .preview-panel {
       background: #fafafa;
@@ -101,10 +141,38 @@
       align-items: center;
     }
 
+    .preview-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .preview-title {
       font-size: 16px;
       font-weight: 600;
       color: #1a1a1a;
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-publish {
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-publish:hover {
+      background: #5568d3;
     }
 
     .preview-badge {
@@ -392,6 +460,245 @@
     .color-input {
       flex: 1;
     }
+    /* Publish Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow: auto;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-header h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+    }
+
+    .modal-header p {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .radio-option:hover {
+      border-color: #667eea;
+      background: #f5f7ff;
+    }
+
+    .radio-option input[type="radio"] {
+      margin-right: 12px;
+      margin-top: 2px;
+    }
+
+    .radio-option-content {
+      flex: 1;
+    }
+
+    .radio-option-title {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .radio-option-desc {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .select-field {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background: white;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    /* Publish Progress */
+    .publish-progress-container {
+      padding: 24px;
+    }
+
+    .progress-bar-container {
+      margin-bottom: 24px;
+    }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s;
+      border-radius: 4px;
+    }
+
+    .progress-text {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+    }
+
+    .progress-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+
+    .progress-step.completed {
+      background: #e8f5e9;
+    }
+
+    .progress-step.failed {
+      background: #ffebee;
+    }
+
+    .step-icon {
+      font-size: 18px;
+    }
+
+    .step-message {
+      flex: 1;
+      font-size: 14px;
+    }
+
+    .publish-error {
+      text-align: center;
+      padding: 40px 24px;
+    }
+
+    .error-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: #d32f2f;
+    }
+
+    .error-message {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 24px;
+    }
+
   </style>
 </head>
 <body>
@@ -413,8 +720,15 @@
     <!-- Center Panel: Preview -->
     <div class="preview-panel">
       <div class="preview-header">
-        <div class="preview-title" id="preview-title">Preview</div>
-        <div class="preview-badge" id="preview-status">Ready</div>
+        <div class="preview-info">
+          <div class="preview-title" id="preview-title">Preview</div>
+        </div>
+        <div class="preview-actions">
+          <div class="preview-badge" id="preview-status">Ready</div>
+          <button class="btn-publish" onclick="openPublishModal()" style="display: none;" id="publish-btn">
+            📦 Publish
+          </button>
+        </div>
       </div>
       <div class="preview-content" id="preview-content">
         <div class="preview-empty">
@@ -433,6 +747,86 @@
       <div class="editor-content" id="editor-content">
         <div class="editor-empty">
           Select a block to edit its properties
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Publish Modal -->
+  <div class="modal" id="publish-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Publish <span id="publish-block-name"></span></h3>
+        <p>Current version: <span id="publish-version"></span></p>
+      </div>
+
+      <!-- Publish Form -->
+      <div id="publish-form">
+        <div class="modal-body">
+          <!-- Target Selection -->
+          <div class="form-group">
+            <label class="form-label">Publish Target</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="publish-target" value="marketplace" id="publish-target-marketplace" onchange="toggleWorkspaceInput()" checked>
+                <div class="radio-option-content">
+                  <div class="radio-option-title">📋 Marketplace (Public)</div>
+                  <div class="radio-option-desc">Submit for review, available to everyone after approval</div>
+                </div>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="publish-target" value="workspace" id="publish-target-workspace" onchange="toggleWorkspaceInput()">
+                <div class="radio-option-content">
+                  <div class="radio-option-title">🏢 Workspace (Private)</div>
+                  <div class="radio-option-desc">Publish instantly to your workspace, no review needed</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Workspace ID (conditional) -->
+          <div class="form-group" id="workspace-id-group" style="display: none;">
+            <label class="form-label" for="publish-workspace-id">Workspace ID</label>
+            <input type="text" class="input-field" id="publish-workspace-id" placeholder="ws_abc123">
+          </div>
+
+          <!-- Version Bump -->
+          <div class="form-group">
+            <label class="form-label" for="publish-version-bump">Version Bump (Optional)</label>
+            <select class="select-field" id="publish-version-bump">
+              <option value="">No change</option>
+              <option value="patch">Patch (1.0.0 → 1.0.1)</option>
+              <option value="minor">Minor (1.0.0 → 1.1.0)</option>
+              <option value="major">Major (1.0.0 → 2.0.0)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closePublishModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="startPublish()">Publish</button>
+        </div>
+      </div>
+
+      <!-- Publish Progress -->
+      <div id="publish-progress" style="display: none;">
+        <div class="publish-progress-container">
+          <div class="progress-bar-container">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="publish-progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="publish-progress-text">0%</div>
+          </div>
+
+          <div class="progress-steps" id="publish-steps">
+            <!-- Steps will be dynamically added here -->
+          </div>
+
+          <div style="text-align: center; margin-top: 24px;">
+            <button class="btn btn-primary" onclick="closePublishModal()" id="publish-close-btn" style="display: none;">
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>
