@@ -11,6 +11,7 @@ import { migrateCommand } from "./commands/migrate.js";
 import { publishCommand } from "./commands/publish.js";
 import { packageCommand } from "./commands/package.js";
 import { uploadCommand } from "./commands/upload.js";
+import { workspacesCommand } from "./commands/workspaces.js";
 
 const program = new Command();
 
@@ -19,7 +20,7 @@ program
   .description(
     "Unified CLI for building and publishing blocks to Cmssy marketplace"
   )
-  .version("0.9.0");
+  .version("0.10.0");
 
 // cmssy init
 program
@@ -113,5 +114,11 @@ program
   .option("-w, --workspace <id>", "Workspace ID to upload to")
   .option("--all", "Upload all packages from packages directory")
   .action(uploadCommand);
+
+// cmssy workspaces
+program
+  .command("workspaces")
+  .description("List your workspaces and get workspace IDs")
+  .action(workspacesCommand);
 
 program.parse();

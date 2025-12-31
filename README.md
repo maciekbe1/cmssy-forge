@@ -45,8 +45,8 @@ Create a `.env` file in your project root with the following variables:
 CMSSY_API_URL=https://api.cmssy.io/graphql
 CMSSY_API_TOKEN=your_api_token_here
 
-# Optional - default workspace ID for publishing
-CMSSY_WORKSPACE_ID=ws_abc123
+# Optional - default workspace ID for publishing (MongoDB ObjectId)
+CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011
 ```
 
 **How to get API Token:**
@@ -54,6 +54,11 @@ CMSSY_WORKSPACE_ID=ws_abc123
 2. Navigate to "API Tokens"
 3. Create a new token with `marketplace:publish` or `workspace:write` scope
 4. Copy the token to your `.env` file
+
+**How to get Workspace ID:**
+1. Run `cmssy workspaces` to list all your workspaces
+2. Copy the ID (MongoDB ObjectId format: 24-character hex string)
+3. Add to `.env` as `CMSSY_WORKSPACE_ID`
 
 Run `cmssy configure` for interactive setup.
 
@@ -199,7 +204,7 @@ cmssy publish hero --marketplace
 cmssy publish --all --marketplace --patch
 
 # Publish to workspace (private, instant)
-cmssy publish hero --workspace ws_abc123
+cmssy publish hero --workspace 507f1f77bcf86cd799439011
 cmssy publish --all --workspace
 cmssy publish pricing --workspace --minor
 
@@ -280,7 +285,7 @@ cmssy upload hero-1.0.0 pricing-2.1.0
 cmssy upload --all
 
 # Specify workspace ID
-cmssy upload --all --workspace ws_abc123
+cmssy upload --all --workspace 507f1f77bcf86cd799439011
 ```
 
 **Requirements:**
@@ -310,7 +315,7 @@ Pull blocks from Cmssy marketplace to local project.
 **Example:**
 ```bash
 cmssy sync @vendor/blocks.hero
-cmssy sync @vendor/blocks.hero --workspace ws_abc123
+cmssy sync @vendor/blocks.hero --workspace 507f1f77bcf86cd799439011
 ```
 
 ---
@@ -336,6 +341,47 @@ cmssy migrate
 - Converts `package.json` cmssy section to `block.config.ts`
 - Removes cmssy section from `package.json`
 - Generates TypeScript types from schema
+
+---
+
+### List Workspaces
+
+```bash
+cmssy workspaces
+```
+
+List all workspaces you have access to and get their IDs.
+
+**Example:**
+```bash
+cmssy workspaces
+```
+
+**Output:**
+```
+📁 Your Workspaces (2):
+
+Acme Corporation
+  Slug: acme-corp
+  ID:   507f1f77bcf86cd799439011
+  Role: owner
+
+Team Project
+  Slug: team-project
+  ID:   673e4f3b2e8d9c1a4b5f6e8d
+  Role: member
+
+💡 Tip: Copy the ID above and add to .env:
+   CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011
+```
+
+**Use this command to:**
+- Find your workspace IDs for publishing
+- See your role in each workspace
+- Copy workspace ID to `.env` for CLI usage
+
+**Requirements:**
+- API token must be configured (run `cmssy configure` first)
 
 ---
 
@@ -435,7 +481,7 @@ For teams with private block libraries:
 cmssy build
 
 # 2. Publish to workspace
-cmssy publish --all --workspace ws_abc123 --patch
+cmssy publish --all --workspace 507f1f77bcf86cd799439011 --patch
 
 # 3. Instantly available in your workspace
 ```
@@ -461,7 +507,7 @@ For manual distribution or custom upload:
 cmssy package --all
 
 # 2. Option A: Upload via CLI
-cmssy upload --all --workspace ws_abc123
+cmssy upload --all --workspace 507f1f77bcf86cd799439011
 
 # 2. Option B: Upload manually
 # - Go to http://localhost:3000/workspace/cmssy/resources/add-external
@@ -481,7 +527,7 @@ cmssy upload --all --workspace ws_abc123
 |----------|----------|-------------|---------|
 | `CMSSY_API_URL` | Yes (for publish/upload) | Cmssy API GraphQL endpoint | `https://api.cmssy.io/graphql` |
 | `CMSSY_API_TOKEN` | Yes (for publish/upload) | API authentication token | `cmssy_abc123...` |
-| `CMSSY_WORKSPACE_ID` | No | Default workspace ID | `ws_abc123` |
+| `CMSSY_WORKSPACE_ID` | No | Default workspace ID (MongoDB ObjectId) | `507f1f77bcf86cd799439011` |
 
 ## Requirements
 
@@ -529,7 +575,10 @@ cmssy create block cta
 
 # Configure API with workspace
 cmssy configure
-# Add CMSSY_WORKSPACE_ID=ws_abc123 to .env
+
+# List workspaces and get workspace ID
+cmssy workspaces
+# Copy workspace ID and add to .env: CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011
 
 # Develop and test
 cmssy dev
@@ -550,7 +599,7 @@ cmssy package --all
 # Distribute ZIP files
 # - Upload manually to Cmssy workspace UI
 # - Or use upload command:
-cmssy upload --all --workspace ws_abc123
+cmssy upload --all --workspace 507f1f77bcf86cd799439011
 
 # Or share packages/hero-1.0.0.zip with team
 ```
@@ -563,7 +612,10 @@ cmssy upload --all --workspace ws_abc123
 Run `cmssy configure` or manually add `CMSSY_API_TOKEN` to `.env`
 
 ### "Workspace ID required"
-Add `CMSSY_WORKSPACE_ID` to `.env` or use `--workspace ws_abc123` flag
+1. Run `cmssy workspaces` to list your workspaces
+2. Copy the workspace ID (24-character hex string like `507f1f77bcf86cd799439011`)
+3. Add to `.env`: `CMSSY_WORKSPACE_ID=507f1f77bcf86cd799439011`
+4. Or use `--workspace 507f1f77bcf86cd799439011` flag in commands
 
 ### "Specify publish target"
 Must use either `--marketplace` OR `--workspace` when publishing
