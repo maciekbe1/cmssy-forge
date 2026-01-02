@@ -39,7 +39,6 @@ export const IMPORT_BLOCK_MUTATION = `
       description
       icon
       category
-      sourceCode
       schemaFields {
         key
         type

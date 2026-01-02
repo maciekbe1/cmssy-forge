@@ -330,6 +330,108 @@ async function scanPackages(
   return packages;
 }
 
+// Bundle source code with esbuild (combines all local imports into single file)
+async function bundleSourceCode(packagePath: string): Promise<string> {
+  const { build } = await import("esbuild");
+
+  const srcDir = path.join(packagePath, "src");
+  const tsxPath = path.join(srcDir, "index.tsx");
+  const tsPath = path.join(srcDir, "index.ts");
+
+  let entryPoint: string;
+  if (fs.existsSync(tsxPath)) {
+    entryPoint = tsxPath;
+  } else if (fs.existsSync(tsPath)) {
+    entryPoint = tsPath;
+  } else {
+    throw new Error(
+      `Source code not found. Expected ${tsxPath} or ${tsPath}`
+    );
+  }
+
+  const result = await build({
+    entryPoints: [entryPoint],
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "browser",
+    jsx: "preserve",
+    loader: { ".tsx": "tsx", ".ts": "ts" },
+    external: ["react", "react-dom", "react-dom/client"],
+  });
+
+  return result.outputFiles[0].text;
+}
+
+// Compile CSS with optional Tailwind support
+async function compileCss(packagePath: string, bundledSourceCode: string): Promise<string | undefined> {
+  const srcDir = path.join(packagePath, "src");
+  const cssPath = path.join(srcDir, "index.css");
+
+  if (!fs.existsSync(cssPath)) {
+    return undefined;
+  }
+
+  let cssContent = fs.readFileSync(cssPath, "utf-8");
+
+  // If no Tailwind/PostCSS imports, return raw CSS
+  if (!cssContent.includes("@import") && !cssContent.includes("@tailwind")) {
+    return cssContent;
+  }
+
+  // Load PostCSS
+  const { default: postcss } = await import("postcss");
+
+  // Check for Tailwind v4 vs v3
+  const projectRoot = process.cwd();
+  const projectPackageJson = fs.readJsonSync(path.join(projectRoot, "package.json"));
+  const hasTailwindV4 = !!(
+    projectPackageJson.devDependencies?.["@tailwindcss/postcss"] ||
+    projectPackageJson.dependencies?.["@tailwindcss/postcss"]
+  );
+
+  let tailwindPlugin: any;
+
+  if (hasTailwindV4) {
+    // Tailwind v4 with @tailwindcss/postcss
+    const tailwindV4Path = path.join(
+      projectRoot,
+      "node_modules",
+      "@tailwindcss/postcss",
+      "dist",
+      "index.mjs"
+    );
+    const tailwindV4Module = await import(tailwindV4Path);
+    tailwindPlugin = tailwindV4Module.default || tailwindV4Module;
+  } else {
+    // Tailwind v3 - convert @import to @tailwind directives
+    cssContent = cssContent.replace(
+      /@import\s+["']tailwindcss["'];?/g,
+      "@tailwind base;\n@tailwind components;\n@tailwind utilities;"
+    );
+
+    const tailwindcssPath = path.join(
+      projectRoot,
+      "node_modules",
+      "tailwindcss",
+      "lib",
+      "index.js"
+    );
+    const tailwindcssModule = await import(tailwindcssPath);
+    const tailwindcss = tailwindcssModule.default || tailwindcssModule;
+    tailwindPlugin = tailwindcss({
+      content: [{ raw: bundledSourceCode, extension: "tsx" }],
+    });
+  }
+
+  // Process CSS
+  const result = await postcss([tailwindPlugin]).process(cssContent, {
+    from: cssPath,
+  });
+
+  return result.css;
+}
+
 async function publishToMarketplace(
   pkg: PackageInfo,
   apiToken: string,
@@ -436,30 +538,6 @@ async function publishToWorkspace(
   // Use blockConfig if available, fallback to package.json cmssy
   const metadata = blockConfig || packageJson.cmssy || {};
 
-  // Read source code from src/index.tsx or src/index.ts
-  const srcDir = path.join(packagePath, "src");
-  let sourceCode: string | undefined;
-
-  const tsxPath = path.join(srcDir, "index.tsx");
-  const tsPath = path.join(srcDir, "index.ts");
-
-  if (fs.existsSync(tsxPath)) {
-    sourceCode = fs.readFileSync(tsxPath, "utf-8");
-  } else if (fs.existsSync(tsPath)) {
-    sourceCode = fs.readFileSync(tsPath, "utf-8");
-  } else {
-    throw new Error(
-      `Source code not found. Expected ${tsxPath} or ${tsPath}`
-    );
-  }
-
-  // Read CSS if exists
-  const cssPath = path.join(srcDir, "index.css");
-  let cssCode: string | undefined;
-  if (fs.existsSync(cssPath)) {
-    cssCode = fs.readFileSync(cssPath, "utf-8");
-  }
-
   // Generate block_type from package name
   // @cmssy/blocks.hero -> hero
   const blockType = packageJson.name
@@ -467,20 +545,28 @@ async function publishToWorkspace(
     .replace(/^blocks\./, "")
     .replace(/^templates\./, "");
 
+  // Bundle source code (combines all local imports)
+  const bundledSourceCode = await bundleSourceCode(packagePath);
+
+  // Compile CSS (with Tailwind if needed)
+  const compiledCss = await compileCss(packagePath, bundledSourceCode);
+
   // Convert block.config.ts schema to schemaFields if using blockConfig
   let schemaFields = metadata.schemaFields || [];
   if (blockConfig && blockConfig.schema) {
     schemaFields = convertSchemaToFields(blockConfig.schema);
   }
 
-  // Build input
+  // Build input with inline sourceCode and cssCode
+  // Backend will handle uploading to Blob Storage
   const input = {
     blockType,
     name: metadata.displayName || metadata.name || packageJson.name,
     description: packageJson.description || metadata.description || "",
     icon: metadata.icon || "Blocks",
     category: metadata.category || "Custom",
-    sourceCode,
+    sourceCode: bundledSourceCode,
+    cssCode: compiledCss,
     schemaFields,
     defaultContent: extractDefaultContent(blockConfig?.schema || {}),
     sourceRegistry: "local",
