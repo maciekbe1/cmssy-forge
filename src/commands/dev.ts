@@ -498,6 +498,20 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
         }
       }
 
+      // Reload package.json if it changed (version updates, etc.)
+      if (filepath.endsWith("package.json")) {
+        const pkgPath = path.join(resource.path, "package.json");
+        if (fs.existsSync(pkgPath)) {
+          const packageJson = fs.readJsonSync(pkgPath);
+          resource.packageJson = packageJson;
+          console.log(
+            chalk.green(
+              `✓ Package.json reloaded for ${resource.name} (v${packageJson.version})`
+            )
+          );
+        }
+      }
+
       console.log(chalk.blue(`♻  Rebuilding ${resource.name}...`));
       await buildResource(resource, devDir, {
         framework: config.framework,
