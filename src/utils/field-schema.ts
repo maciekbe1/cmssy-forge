@@ -1,7 +1,7 @@
 import fs from "fs-extra";
-import path from "path";
-import { loadConfig, hasConfig } from "./config.js";
 import fetch from "node-fetch";
+import path from "path";
+import { hasConfig, loadConfig } from "./config.js";
 
 export interface FieldTypeDefinition {
   type: string;
@@ -38,29 +38,15 @@ const FALLBACK_FIELD_TYPES: FieldTypeDefinition[] = [
     supportsValidation: false,
   },
   {
-    type: "text",
-    label: "Text (legacy)",
-    description: "Legacy text field",
-    allowsDefaultValue: true,
-    supportsValidation: true,
-  },
-  {
-    type: "string",
-    label: "String (legacy)",
-    description: "Legacy string field",
-    allowsDefaultValue: true,
-    supportsValidation: true,
-  },
-  {
-    type: "number",
-    label: "Number",
+    type: "numeric",
+    label: "Numeric",
     description: "Numeric input",
     allowsDefaultValue: true,
     supportsValidation: true,
   },
   {
-    type: "boolean",
-    label: "Boolean",
+    type: "toggle",
+    label: "Toggle",
     description: "True/false toggle",
     allowsDefaultValue: true,
     supportsValidation: false,
@@ -94,11 +80,25 @@ const FALLBACK_FIELD_TYPES: FieldTypeDefinition[] = [
     supportsValidation: true,
   },
   {
+    type: "multiselect",
+    label: "Multi-select",
+    description: "Multiple selection",
+    allowsDefaultValue: true,
+    supportsValidation: true,
+  },
+  {
     type: "color",
     label: "Color",
     description: "Color picker",
     allowsDefaultValue: true,
     supportsValidation: false,
+  },
+  {
+    type: "slider",
+    label: "Slider",
+    description: "Range slider",
+    allowsDefaultValue: true,
+    supportsValidation: true,
   },
   {
     type: "repeater",

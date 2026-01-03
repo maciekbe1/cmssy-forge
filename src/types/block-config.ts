@@ -4,15 +4,15 @@ export type FieldType =
   | "singleLine"
   | "multiLine"
   | "richText"
-  | "text" // backward compat
-  | "string" // backward compat
-  | "number"
-  | "boolean"
+  | "numeric"
   | "date"
   | "media"
   | "link"
   | "select"
+  | "multiselect"
+  | "toggle"
   | "color"
+  | "slider"
   | "repeater";
 
 export interface BaseFieldConfig {

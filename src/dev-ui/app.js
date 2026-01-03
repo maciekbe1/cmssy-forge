@@ -749,5 +749,79 @@ function showPublishError(message) {
   `;
 }
 
+// Panel Toggle Functionality - Collapsed Sidebar
+let leftPanelCollapsed = false;
+let rightPanelCollapsed = false;
+
+window.toggleLeftPanel = function() {
+  const container = document.getElementById('container');
+  const toggleBtn = document.getElementById('toggle-left');
+
+  leftPanelCollapsed = !leftPanelCollapsed;
+
+  if (leftPanelCollapsed) {
+    container.classList.add('left-collapsed');
+    toggleBtn.setAttribute('title', 'Expand panel (Ctrl+B)');
+  } else {
+    container.classList.remove('left-collapsed');
+    toggleBtn.setAttribute('title', 'Collapse panel (Ctrl+B)');
+  }
+
+  // Save preference
+  localStorage.setItem('leftPanelCollapsed', leftPanelCollapsed);
+};
+
+window.toggleRightPanel = function() {
+  const container = document.getElementById('container');
+  const toggleBtn = document.getElementById('toggle-right');
+
+  rightPanelCollapsed = !rightPanelCollapsed;
+
+  if (rightPanelCollapsed) {
+    container.classList.add('right-collapsed');
+    toggleBtn.setAttribute('title', 'Expand panel (Ctrl+E)');
+  } else {
+    container.classList.remove('right-collapsed');
+    toggleBtn.setAttribute('title', 'Collapse panel (Ctrl+E)');
+  }
+
+  // Save preference
+  localStorage.setItem('rightPanelCollapsed', rightPanelCollapsed);
+};
+
+// Restore panel states from localStorage
+function restorePanelStates() {
+  const savedLeftState = localStorage.getItem('leftPanelCollapsed');
+  const savedRightState = localStorage.getItem('rightPanelCollapsed');
+
+  if (savedLeftState === 'true') {
+    leftPanelCollapsed = false; // Set to false so toggle will flip it
+    toggleLeftPanel();
+  }
+
+  if (savedRightState === 'true') {
+    rightPanelCollapsed = false; // Set to false so toggle will flip it
+    toggleRightPanel();
+  }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (event) => {
+  // Ctrl+B (or Cmd+B on Mac) - Toggle left panel
+  if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+    event.preventDefault();
+    toggleLeftPanel();
+  }
+
+  // Ctrl+E (or Cmd+E on Mac) - Toggle right panel
+  if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+    event.preventDefault();
+    toggleRightPanel();
+  }
+});
+
 // Start the app
 init();
+
+// Restore panel states after init
+setTimeout(restorePanelStates, 100);

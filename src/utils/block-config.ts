@@ -1,14 +1,14 @@
-import fs from "fs-extra";
-import path from "path";
 import chalk from "chalk";
 import { execSync } from "child_process";
+import fs from "fs-extra";
+import path from "path";
 import {
   BlockConfig,
-  TemplateConfig,
-  ResourceConfig,
   FieldConfig,
   RepeaterFieldConfig,
+  ResourceConfig,
   SelectFieldConfig,
+  TemplateConfig,
 } from "../types/block-config.js";
 import { getFieldTypes, isValidFieldType } from "./field-schema.js";
 
@@ -33,16 +33,18 @@ export async function loadBlockConfig(
 
   try {
     // Find tsx binary - try multiple locations
-    const cliPath = path.dirname(path.dirname(new URL(import.meta.url).pathname));
+    const cliPath = path.dirname(
+      path.dirname(new URL(import.meta.url).pathname)
+    );
 
     // Possible locations for tsx binary
     const possibleTsxPaths = [
-      path.join(cliPath, "node_modules", ".bin", "tsx"),
+      path.join(cliPath, "..", "node_modules", ".bin", "tsx"), // CLI's node_modules (dist -> root)
       path.join(cliPath, "..", "..", "node_modules", ".bin", "tsx"), // If symlinked
       path.join(process.cwd(), "node_modules", ".bin", "tsx"), // Project's node_modules
     ];
 
-    let tsxBinary = possibleTsxPaths.find(p => fs.existsSync(p));
+    let tsxBinary = possibleTsxPaths.find((p) => fs.existsSync(p));
 
     // If not found, use npx as fallback
     if (!tsxBinary) {
@@ -61,15 +63,21 @@ export async function loadBlockConfig(
     const configContent = fs.readFileSync(configPath, "utf-8");
     const modifiedConfig = configContent.replace(
       /from\s+['"]cmssy-cli\/config['"]/g,
-      `from '${mockConfigPath.replace(/\\/g, '/')}'`
+      `from '${mockConfigPath.replace(/\\/g, "/")}'`
     );
 
     // Write modified config to temp file
-    const tempConfigPath = path.join(cacheDir, `temp-${path.basename(configPath)}`);
+    const tempConfigPath = path.join(
+      cacheDir,
+      `temp-${path.basename(configPath)}`
+    );
     fs.writeFileSync(tempConfigPath, modifiedConfig);
 
     // Execute with tsx - use --eval to import and output
-    const evalCode = `import cfg from '${tempConfigPath.replace(/\\/g, '/')}'; console.log(JSON.stringify(cfg.default || cfg));`;
+    const evalCode = `import cfg from '${tempConfigPath.replace(
+      /\\/g,
+      "/"
+    )}'; console.log(JSON.stringify(cfg.default || cfg));`;
 
     // Build command - handle both direct binary path and npx
     const command = tsxBinary.includes("npx")
@@ -120,7 +128,11 @@ export async function validateSchema(
     // Check if field type is valid
     if (!isValidFieldType(field.type, fieldTypes)) {
       errors.push(
-        `Invalid field type "${field.type}" for field "${fullPath}". Valid types: ${fieldTypes.map((ft) => ft.type).join(", ")}`
+        `Invalid field type "${
+          field.type
+        }" for field "${fullPath}". Valid types: ${fieldTypes
+          .map((ft) => ft.type)
+          .join(", ")}`
       );
     }
 
@@ -156,9 +168,7 @@ export async function validateSchema(
         repeaterField.maxItems &&
         repeaterField.minItems > repeaterField.maxItems
       ) {
-        errors.push(
-          `Repeater field "${fullPath}" has minItems > maxItems`
-        );
+        errors.push(`Repeater field "${fullPath}" has minItems > maxItems`);
       }
     }
 
@@ -170,9 +180,7 @@ export async function validateSchema(
         !Array.isArray(selectField.options) ||
         selectField.options.length === 0
       ) {
-        errors.push(
-          `Select field "${fullPath}" must have at least one option`
-        );
+        errors.push(`Select field "${fullPath}" must have at least one option`);
       }
     }
 
@@ -209,7 +217,8 @@ export function generatePackageJsonMetadata(
     displayName: config.name,
     description: config.description,
     longDescription: config.longDescription,
-    category: config.category || (packageType === "template" ? "pages" : "other"),
+    category:
+      config.category || (packageType === "template" ? "pages" : "other"),
     tags: config.tags || [],
     pricing: config.pricing || { licenseType: "free" },
     schemaFields,

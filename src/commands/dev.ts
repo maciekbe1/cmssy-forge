@@ -1,22 +1,18 @@
 import chalk from "chalk";
+import { exec, execSync } from "child_process";
 import chokidar from "chokidar";
 import { build } from "esbuild";
-import { exec, execSync } from "child_process";
 import express from "express";
 import fs from "fs-extra";
+import { GraphQLClient } from "graphql-request";
 import ora from "ora";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GraphQLClient } from "graphql-request";
+import { ResourceConfig } from "../types/block-config.js";
+import { loadBlockConfig, validateSchema } from "../utils/block-config.js";
 import { getPackageJson, loadConfig } from "../utils/cmssy-config.js";
 import { loadConfig as loadEnvConfig } from "../utils/config.js";
-import {
-  loadBlockConfig,
-  validateSchema,
-  generatePackageJsonMetadata,
-} from "../utils/block-config.js";
 import { generateTypes } from "../utils/type-generator.js";
-import { ResourceConfig } from "../types/block-config.js";
 
 interface DevOptions {
   port: string;
@@ -114,7 +110,7 @@ export async function devCommand(options: DevOptions) {
         if (!config.apiToken) {
           res.status(401).json({
             error: "API token not configured",
-            message: "Run 'cmssy configure' to set up your API credentials"
+            message: "Run 'cmssy configure' to set up your API credentials",
           });
           return;
         }
@@ -143,7 +139,7 @@ export async function devCommand(options: DevOptions) {
         console.error("Failed to fetch workspaces:", error);
         res.status(500).json({
           error: "Failed to fetch workspaces",
-          message: error.message || "Unknown error"
+          message: error.message || "Unknown error",
         });
       }
     });
@@ -206,7 +202,9 @@ export async function devCommand(options: DevOptions) {
       res.json({
         name: resource.name,
         version: resource.packageJson?.version || "1.0.0",
-        packageName: resource.packageJson?.name || `@local/${resource.type}s.${resource.name}`,
+        packageName:
+          resource.packageJson?.name ||
+          `@local/${resource.type}s.${resource.name}`,
         published: false, // TODO: Check actual publish status from backend
         lastPublished: null,
       });
@@ -226,17 +224,23 @@ export async function devCommand(options: DevOptions) {
 
       // Validate target
       if (!target || (target !== "marketplace" && target !== "workspace")) {
-        res.status(400).json({ error: "Invalid target. Must be 'marketplace' or 'workspace'" });
+        res.status(400).json({
+          error: "Invalid target. Must be 'marketplace' or 'workspace'",
+        });
         return;
       }
 
       if (target === "workspace" && !workspaceId) {
-        res.status(400).json({ error: "Workspace ID required for workspace publish" });
+        res
+          .status(400)
+          .json({ error: "Workspace ID required for workspace publish" });
         return;
       }
 
       // Create task ID
-      const taskId = `publish-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const taskId = `publish-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
 
       // Store task
       publishTasks.set(taskId, {
@@ -249,7 +253,14 @@ export async function devCommand(options: DevOptions) {
       });
 
       // Start async publish
-      executePublish(taskId, resource, target, workspaceId, versionBump, publishTasks);
+      executePublish(
+        taskId,
+        resource,
+        target,
+        workspaceId,
+        versionBump,
+        publishTasks
+      );
 
       res.json({ taskId, status: "started" });
     });
@@ -337,61 +348,45 @@ export async function devCommand(options: DevOptions) {
     app.listen(port, () => {
       spinner.succeed("Development server started");
       console.log(
-        chalk.green.bold("\n┌─────────────────────────────────────────┐")
+        chalk.green.bold("\n─────────────────────────────────────────")
       );
+      console.log(chalk.green.bold("   Cmssy Dev Server"));
       console.log(
-        chalk.green.bold("│   Cmssy Dev Server                      │")
+        chalk.green.bold("─────────────────────────────────────────")
       );
-      console.log(
-        chalk.green.bold("├─────────────────────────────────────────┤")
-      );
-      console.log(chalk.green("│                                         │"));
+      console.log("");
 
       const blocks = resources.filter((r) => r.type === "block");
       const templates = resources.filter((r) => r.type === "template");
 
       if (blocks.length > 0) {
-        console.log(
-          chalk.cyan(
-            `│   Blocks (${blocks.length})                           │`
-          )
-        );
+        console.log(chalk.cyan(`   Blocks (${blocks.length})`));
         blocks.forEach((block) => {
           const url = `/preview/block/${block.name}`;
           console.log(
-            chalk.white(
-              `│   ● ${block.displayName.padEnd(20)} ${url.padEnd(15)}│`
-            )
+            chalk.white(`   ● ${block.displayName.padEnd(20)} ${url}`)
           );
         });
-        console.log(chalk.green("│                                         │"));
+        console.log("");
       }
 
       if (templates.length > 0) {
-        console.log(
-          chalk.cyan(
-            `│   Templates (${templates.length})                       │`
-          )
-        );
+        console.log(chalk.cyan(`   Templates (${templates.length})`));
         templates.forEach((template) => {
           const url = `/preview/template/${template.name}`;
           console.log(
-            chalk.white(
-              `│   ● ${template.displayName.padEnd(20)} ${url.padEnd(15)}│`
-            )
+            chalk.white(`   ● ${template.displayName.padEnd(20)} ${url}`)
           );
         });
-        console.log(chalk.green("│                                         │"));
+        console.log("");
       }
 
       console.log(
-        chalk.green(
-          `│   Local:   ${chalk.cyan(`http://localhost:${port}`).padEnd(36)}│`
-        )
+        chalk.green(`   Local:   ${chalk.cyan(`http://localhost:${port}`)}`)
       );
-      console.log(chalk.green("│   Hot reload enabled ✓                  │"));
+      console.log(chalk.green("   Hot reload enabled ✓"));
       console.log(
-        chalk.green.bold("└─────────────────────────────────────────┘\n")
+        chalk.green.bold("─────────────────────────────────────────\n")
       );
     });
   } catch (error) {
@@ -435,7 +430,9 @@ async function scanResources(): Promise<Resource[]> {
       const validation = await validateSchema(blockConfig.schema, blockPath);
       if (!validation.valid) {
         console.warn(chalk.yellow(`\nValidation warnings in ${blockName}:`));
-        validation.errors.forEach((err) => console.warn(chalk.yellow(`  - ${err}`)));
+        validation.errors.forEach((err) =>
+          console.warn(chalk.yellow(`  - ${err}`))
+        );
         continue;
       }
 
@@ -500,7 +497,9 @@ async function scanResources(): Promise<Resource[]> {
       const validation = await validateSchema(blockConfig.schema, templatePath);
       if (!validation.valid) {
         console.warn(chalk.yellow(`\nValidation warnings in ${templateName}:`));
-        validation.errors.forEach((err) => console.warn(chalk.yellow(`  - ${err}`)));
+        validation.errors.forEach((err) =>
+          console.warn(chalk.yellow(`  - ${err}`))
+        );
         continue;
       }
 
@@ -630,10 +629,10 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
     persistent: true,
     ignoreInitial: true,
     ignored: [
-      '**/preview.json', // Ignore preview.json changes (handled via postMessage)
-      '**/.cmssy/**',
-      '**/node_modules/**',
-      '**/.git/**',
+      "**/preview.json", // Ignore preview.json changes (handled via postMessage)
+      "**/.cmssy/**",
+      "**/node_modules/**",
+      "**/.git/**",
     ],
     awaitWriteFinish: {
       stabilityThreshold: 100,
@@ -651,20 +650,27 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
 
     // IGNORE preview.json changes - handled via postMessage for instant updates
     if (filepath.endsWith("preview.json")) {
-      console.log(chalk.gray(`   Skipping preview.json (props updated via UI)`));
+      console.log(
+        chalk.gray(`   Skipping preview.json (props updated via UI)`)
+      );
       return;
     }
 
     // Check if it's a block.config.ts file
     if (filepath.endsWith("block.config.ts")) {
-      console.log(chalk.blue(`⚙️  Configuration changed, reloading and regenerating types...`));
+      console.log(
+        chalk.blue(
+          `⚙️  Configuration changed, reloading and regenerating types...`
+        )
+      );
     }
 
     // Extract resource name from path (e.g., "blocks/hero/src/Hero.tsx" -> "hero")
     const pathParts = filepath.split(path.sep);
-    const blockOrTemplateIndex = pathParts.indexOf("blocks") !== -1
-      ? pathParts.indexOf("blocks")
-      : pathParts.indexOf("templates");
+    const blockOrTemplateIndex =
+      pathParts.indexOf("blocks") !== -1
+        ? pathParts.indexOf("blocks")
+        : pathParts.indexOf("templates");
 
     if (blockOrTemplateIndex === -1) return;
 
@@ -700,7 +706,9 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
         }
       });
     } else {
-      console.log(chalk.yellow(`Warning: Could not find resource for ${filepath}`));
+      console.log(
+        chalk.yellow(`Warning: Could not find resource for ${filepath}`)
+      );
     }
   });
 
@@ -733,11 +741,13 @@ function generateIndexHTML(resources: Resource[]): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cmssy Dev Server</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Only reset specific elements, NOT all */
     body {
+      margin: 0;
+      padding: 2rem;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f5f5f5;
-      padding: 2rem;
+      box-sizing: border-box;
     }
     .container { max-width: 1200px; margin: 0 auto; }
     h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
@@ -873,7 +883,11 @@ async function executePublish(
     // Update: Building
     task.status = "building";
     task.progress = 10;
-    task.steps.push({ step: "building", status: "in_progress", message: "Building block..." });
+    task.steps.push({
+      step: "building",
+      status: "in_progress",
+      message: "Building block...",
+    });
 
     // Build command args
     let args = ["publish", resource.name, `--${target}`];
@@ -887,28 +901,40 @@ async function executePublish(
     }
 
     task.steps[task.steps.length - 1].status = "completed";
-    task.steps.push({ step: "validating", status: "in_progress", message: "Validating configuration..." });
+    task.steps.push({
+      step: "validating",
+      status: "in_progress",
+      message: "Validating configuration...",
+    });
     task.progress = 30;
 
     // Execute cmssy publish command (use global CLI)
     const command = `cmssy ${args.join(" ")}`;
 
     task.steps[task.steps.length - 1].status = "completed";
-    task.steps.push({ step: "publishing", status: "in_progress", message: `Publishing to ${target}...` });
+    task.steps.push({
+      step: "publishing",
+      status: "in_progress",
+      message: `Publishing to ${target}...`,
+    });
     task.progress = 50;
 
     // Execute command
     await new Promise<void>((resolve, reject) => {
-      exec(command, {
-        cwd: process.cwd(),
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-      }, (error: any, stdout: string, stderr: string) => {
-        if (error) {
-          reject(new Error(stderr || error.message));
-        } else {
-          resolve();
+      exec(
+        command,
+        {
+          cwd: process.cwd(),
+          maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+        },
+        (error: any, stdout: string, stderr: string) => {
+          if (error) {
+            reject(new Error(stderr || error.message));
+          } else {
+            resolve();
+          }
         }
-      });
+      );
     });
 
     task.steps[task.steps.length - 1].status = "completed";
@@ -917,11 +943,11 @@ async function executePublish(
     task.steps.push({
       step: "completed",
       status: "completed",
-      message: target === "marketplace"
-        ? "Submitted for review. You'll be notified when approved."
-        : "Published to workspace successfully!"
+      message:
+        target === "marketplace"
+          ? "Submitted for review. You'll be notified when approved."
+          : "Published to workspace successfully!",
     });
-
   } catch (error: any) {
     task.status = "failed";
     task.error = error.message;
@@ -931,7 +957,7 @@ async function executePublish(
     task.steps.push({
       step: "error",
       status: "failed",
-      message: `Error: ${error.message}`
+      message: `Error: ${error.message}`,
     });
   }
 }
@@ -948,13 +974,18 @@ function generatePreviewHTML(resource: Resource, config: any): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${resource.displayName} - Preview</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23667eea'/%3E%3Ctext x='50' y='70' font-size='60' font-weight='bold' text-anchor='middle' fill='white' font-family='system-ui'%3EC%3C/text%3E%3C/svg%3E">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="${cssPath}">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    /* Only reset body and preview UI elements, NOT block content */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
     .preview-header {
       position: fixed;
       top: 0;
@@ -967,10 +998,13 @@ function generatePreviewHTML(resource: Resource, config: any): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin: 0;
+      box-sizing: border-box;
     }
     .preview-title {
       font-size: 1.25rem;
       font-weight: 600;
+      margin: 0;
     }
     .preview-back {
       color: #667eea;

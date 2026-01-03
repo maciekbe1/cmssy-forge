@@ -2,8 +2,8 @@ import fs from "fs-extra";
 import path from "path";
 import {
   FieldConfig,
-  SelectFieldConfig,
   RepeaterFieldConfig,
+  SelectFieldConfig,
 } from "../types/block-config.js";
 
 export async function generateTypes(
@@ -48,20 +48,19 @@ function mapFieldTypeToTypeScript(field: FieldConfig): string {
     case "singleLine":
     case "multiLine":
     case "richText":
-    case "text":
-    case "string":
     case "link":
     case "color":
       return "string";
 
-    case "number":
+    case "numeric":
+    case "slider":
       return "number";
 
-    case "boolean":
+    case "toggle":
       return "boolean";
 
     case "date":
-      return "string"; // ISO date string
+      return "string";
 
     case "media":
       return "{ url: string; alt?: string; width?: number; height?: number }";
@@ -77,10 +76,16 @@ function mapFieldTypeToTypeScript(field: FieldConfig): string {
       return "string";
     }
 
+    case "multiselect":
+      return "string[]";
+
     case "repeater": {
       const repeaterField = field as RepeaterFieldConfig;
       if (repeaterField.schema) {
-        const nestedType = `{\n${generateTypeDefinition(repeaterField.schema, "    ")}\n  }`;
+        const nestedType = `{\n${generateTypeDefinition(
+          repeaterField.schema,
+          "    "
+        )}\n  }`;
         return `Array<${nestedType}>`;
       }
       return "any[]";
