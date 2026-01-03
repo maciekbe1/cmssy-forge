@@ -518,6 +518,14 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
       return;
     }
 
+    // IGNORE auto-generated block.d.ts to prevent double rebuild
+    if (filepath.endsWith("block.d.ts")) {
+      console.log(
+        chalk.gray(`   Skipping block.d.ts (auto-generated)`)
+      );
+      return;
+    }
+
     // Check if it's a block.config.ts file
     if (filepath.endsWith("block.config.ts")) {
       console.log(
@@ -582,9 +590,14 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
       console.log(chalk.green(`✓ ${resource.name} rebuilt\n`));
 
       // Notify SSE clients to reload
+      const isConfigChange = filepath.endsWith("block.config.ts");
       sseClients.forEach((client) => {
         try {
-          client.write(`data: ${JSON.stringify({ type: "reload" })}\n\n`);
+          client.write(`data: ${JSON.stringify({
+            type: "reload",
+            block: resource.name,
+            configChanged: isConfigChange
+          })}\n\n`);
         } catch (error) {
           // Client disconnected
         }

@@ -480,10 +480,18 @@ async function savePreviewData() {
 function setupSSE() {
   eventSource = new EventSource('/events');
 
-  eventSource.onmessage = (event) => {
+  eventSource.onmessage = async (event) => {
     const data = JSON.parse(event.data);
 
     if (data.type === 'reload') {
+      // If config changed, reload blocks list to update schema
+      if (data.configChanged && currentBlock && data.block === currentBlock.name) {
+        console.log('Config changed, reloading block data...');
+        await loadBlocks();
+        // Re-select current block to refresh properties sidebar
+        await selectBlock(currentBlock.name);
+      }
+
       // Reload preview iframe
       const iframe = document.getElementById('preview-iframe');
       if (iframe && (!data.block || data.block === currentBlock?.name)) {
