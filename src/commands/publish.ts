@@ -433,37 +433,16 @@ async function bundleSourceCode(packagePath: string): Promise<string> {
     jsx: "transform", // Transform JSX to React.createElement
     loader: { ".tsx": "tsx", ".ts": "ts", ".css": "empty" },
     external: [], // Bundle everything (React included)
-    minify: true, // Minify to reduce bundle size
-    treeShaking: true, // Remove unused code
+    minify: false, // Keep code readable for debugging
     define: {
       // Replace process.env references with static values
       'process.env.NODE_ENV': '"production"',
     },
   });
 
-  let bundledCode = result.outputFiles[0].text;
-
-  // Post-process: Convert __toCommonJS export to direct function export
-  // esbuild's CommonJS format creates: module.exports = __toCommonJS(exports_obj)
-  // We need: module.exports = Component (direct function)
-  // This fixes SSR renderer expecting typeof function, not object
-  bundledCode = bundledCode.replace(
-    /module\.exports\s*=\s*__toCommonJS\([^)]+\);/,
-    `// Direct export for SSR compatibility
-if (typeof exports.default === 'function') {
-  module.exports = exports.default;
-} else {
-  // Fallback: find first function export
-  const funcExport = Object.keys(exports).find(k => typeof exports[k] === 'function');
-  if (funcExport) {
-    module.exports = exports[funcExport];
-  } else {
-    throw new Error('Block must export a React component function');
-  }
-}`
-  );
-
-  return bundledCode;
+  // SSR renderer now handles CommonJS exports (objects with default property)
+  // No post-processing needed
+  return result.outputFiles[0].text;
 }
 
 // Wrap bundled code with mount/update pattern for interactive blocks
