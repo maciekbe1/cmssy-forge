@@ -430,10 +430,43 @@ async function bundleSourceCode(packagePath: string): Promise<string> {
     platform: "browser",
     jsx: "preserve",
     loader: { ".tsx": "tsx", ".ts": "ts" },
-    external: ["react", "react-dom", "react-dom/client"],
+    external: ["react", "react-dom", "react-dom/client", "*.css"],
   });
 
   return result.outputFiles[0].text;
+}
+
+// Wrap bundled code with mount/update pattern for interactive blocks
+function wrapWithInteractivePattern(bundledCode: string): string {
+  return `
+// Original component code
+${bundledCode}
+
+// Auto-generated interactive wrapper by CLI
+import { createRoot } from 'react-dom/client';
+
+const OriginalComponent = exports.default || module.exports.default;
+
+if (!OriginalComponent) {
+  throw new Error('Block must export a default component');
+}
+
+export default {
+  mount(element, props) {
+    const root = createRoot(element);
+    root.render(React.createElement(OriginalComponent, { content: props }));
+    return { root };
+  },
+
+  update(_element, props, ctx) {
+    ctx.root.render(React.createElement(OriginalComponent, { content: props }));
+  },
+
+  unmount(_element, ctx) {
+    ctx.root.unmount();
+  }
+};
+`.trim();
 }
 
 // Compile CSS with optional Tailwind support
@@ -606,6 +639,7 @@ async function publishToWorkspace(
   apiToken: string,
   apiUrl: string
 ): Promise<void> {
+  console.log("[DEBUG] publishToWorkspace START");
   const { packageJson, path: packagePath, blockConfig } = pkg;
 
   // Use blockConfig if available, fallback to package.json cmssy
@@ -618,11 +652,24 @@ async function publishToWorkspace(
     .replace(/^blocks\./, "")
     .replace(/^templates\./, "");
 
+  console.log("[DEBUG] Starting bundleSourceCode...");
   // Bundle source code (combines all local imports)
-  const bundledSourceCode = await bundleSourceCode(packagePath);
+  let bundledSourceCode = await bundleSourceCode(packagePath);
+  console.log("[DEBUG] bundleSourceCode DONE");
 
+  // Wrap with interactive pattern if block is interactive
+  const isInteractive = metadata.interactive || false;
+  if (isInteractive) {
+    console.log("[DEBUG] Wrapping with interactive mount/update pattern...");
+    bundledSourceCode = wrapWithInteractivePattern(bundledSourceCode);
+  } else {
+    console.log("[DEBUG] Using direct export (SSR ready)");
+  }
+
+  console.log("[DEBUG] Starting compileCss...");
   // Compile CSS (with Tailwind if needed)
   const compiledCss = await compileCss(packagePath, bundledSourceCode);
+  console.log("[DEBUG] compileCss DONE");
 
   // Convert block.config.ts schema to schemaFields if using blockConfig
   let schemaFields = metadata.schemaFields || [];
@@ -640,6 +687,7 @@ async function publishToWorkspace(
     category: metadata.category || "Custom",
     sourceCode: bundledSourceCode,
     cssCode: compiledCss,
+    interactive: metadata.interactive || false,
     schemaFields,
     defaultContent: extractDefaultContent(blockConfig?.schema || {}),
     sourceRegistry: "local",
@@ -656,37 +704,32 @@ async function publishToWorkspace(
     },
   });
 
-  // Send mutation with timeout using AbortController
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
+  // Send mutation with timeout using Promise.race
+  const TIMEOUT_MS = 180000; // 3 minutes
 
-  try {
-    const result = await client.request(
-      IMPORT_BLOCK_MUTATION,
-      { input },
-      { signal: controller.signal as any }
-    );
-
-    clearTimeout(timeoutId);
-
-    if (!result.importBlock) {
-      throw new Error("Failed to import block to workspace");
-    }
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-
-    // Handle timeout/abort errors specifically
-    if (error.name === "AbortError" || error.message?.includes("aborted")) {
-      throw new Error(
+  console.log("[DEBUG] Creating timeout promise...");
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      console.log("[DEBUG] TIMEOUT FIRED!");
+      reject(new Error(
         "Block upload timed out after 3 minutes. This may be due to:\n" +
         "  - Large file size (try reducing bundle size)\n" +
         "  - Slow network connection\n" +
         "  - Backend processing issues\n" +
         "Check backend logs for more details."
-      );
-    }
-    // Re-throw other errors
-    throw error;
+      ));
+    }, TIMEOUT_MS);
+  });
+
+  console.log("[DEBUG] Sending GraphQL request to:", apiUrl);
+  const requestPromise = client.request(IMPORT_BLOCK_MUTATION, { input });
+
+  console.log("[DEBUG] Waiting for Promise.race...");
+  const result = await Promise.race([requestPromise, timeoutPromise]);
+  console.log("[DEBUG] Promise.race RESOLVED!");
+
+  if (!result.importBlock) {
+    throw new Error("Failed to import block to workspace");
   }
 }
 

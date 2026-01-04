@@ -113,7 +113,7 @@ export async function buildResource(
       minify,
       sourcemap,
       target: "es2020",
-      external: ["*.css"],
+      loader: { ".css": "empty" }, // Ignore CSS imports (CSS is handled separately)
     });
   } catch (error) {
     const message = `Build error for ${resource.name}`;

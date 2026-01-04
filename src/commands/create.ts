@@ -89,32 +89,13 @@ export default function ${componentName}({ content }: { content: BlockContent })
         componentFile
       );
 
-      // Create index file with mount/unmount
-      const indexFile = `import React from 'react';
-import { createRoot, Root } from 'react-dom/client';
-import ${componentName} from './${componentName}';
+      // Create index file with direct component export (SSR ready)
+      // For interactive blocks, set interactive: true in block.config.ts
+      // and CLI will auto-wrap with mount/update pattern during build
+      const indexFile = `import ${componentName} from './${componentName}';
 import './index.css';
 
-interface BlockContext {
-  root: Root;
-}
-
-export default {
-  mount(element: HTMLElement, props: any): BlockContext {
-    const root = createRoot(element);
-    root.render(<${componentName} content={props} />);
-    return { root };
-  },
-
-  update(_element: HTMLElement, props: any, ctx: BlockContext): void {
-    // Re-render with new props (no unmount = no blink!)
-    ctx.root.render(<${componentName} content={props} />);
-  },
-
-  unmount(_element: HTMLElement, ctx: BlockContext): void {
-    ctx.root.unmount();
-  }
-};
+export default ${componentName};
 `;
       fs.writeFileSync(path.join(blockPath, "src", "index.tsx"), indexFile);
     }

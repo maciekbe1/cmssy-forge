@@ -48,6 +48,7 @@ export interface BlockConfig {
   category: string;
   tags?: string[];
   schema: Record<string, FieldConfig>;
+  interactive?: boolean; // Whether block requires client-side rendering (default: false = SSR)
   pricing?: {
     licenseType: "free" | "paid";
     priceCents?: number;

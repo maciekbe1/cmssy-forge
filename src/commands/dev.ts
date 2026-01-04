@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import chokidar from "chokidar";
 import express from "express";
 import fs from "fs-extra";
@@ -657,6 +657,9 @@ async function executePublish(
 
     if (versionBump) {
       args.push(`--${versionBump}`);
+    } else {
+      // Default to patch version bump to avoid interactive prompt
+      args.push("--patch");
     }
 
     task.steps[task.steps.length - 1].status = "completed";
@@ -678,23 +681,53 @@ async function executePublish(
     });
     task.progress = 50;
 
-    // Execute command
-    await new Promise<void>((resolve, reject) => {
-      exec(
-        command,
-        {
-          cwd: process.cwd(),
-          maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-        },
-        (error: any, stdout: string, stderr: string) => {
-          if (error) {
-            reject(new Error(stderr || error.message));
-          } else {
-            resolve();
-          }
+    // Execute command with timeout using spawn for real-time stdout
+    const PUBLISH_TIMEOUT_MS = 180000; // 3 minutes
+
+    const execPromise = new Promise<void>((resolve, reject) => {
+      const child = spawn("cmssy", args, {
+        cwd: process.cwd(),
+        stdio: "pipe",
+      });
+
+      let stderr = "";
+
+      child.stdout?.on("data", (data) => {
+        console.log("[PUBLISH]", data.toString().trim());
+      });
+
+      child.stderr?.on("data", (data) => {
+        const msg = data.toString().trim();
+        stderr += msg + "\n";
+        console.error("[PUBLISH ERROR]", msg);
+      });
+
+      child.on("close", (code) => {
+        if (code !== 0) {
+          reject(new Error(stderr || `Publish exited with code ${code}`));
+        } else {
+          resolve();
         }
-      );
+      });
+
+      child.on("error", (error) => {
+        reject(error);
+      });
     });
+
+    const timeoutPromise = new Promise<void>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(
+          "Publish timed out after 3 minutes. This may be due to:\n" +
+          "  - Large bundle size (check bundleSourceCode)\n" +
+          "  - Tailwind CSS compilation hanging\n" +
+          "  - Backend not responding\n" +
+          "Check console logs for details."
+        ));
+      }, PUBLISH_TIMEOUT_MS);
+    });
+
+    await Promise.race([execPromise, timeoutPromise]);
 
     task.steps[task.steps.length - 1].status = "completed";
     task.progress = 100;
