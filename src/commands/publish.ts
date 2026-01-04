@@ -432,7 +432,9 @@ async function bundleSourceCode(packagePath: string): Promise<string> {
     platform: "browser", // Browser platform to avoid Node.js globals like 'process'
     jsx: "transform", // Transform JSX to React.createElement
     loader: { ".tsx": "tsx", ".ts": "ts", ".css": "empty" },
-    external: ['react', 'react-dom'], // Don't bundle React - provided by sandbox
+    external: [], // Bundle everything (React included)
+    minify: true, // Minify to reduce bundle size
+    treeShaking: true, // Remove unused code
     define: {
       // Replace process.env references with static values
       'process.env.NODE_ENV': '"production"',
