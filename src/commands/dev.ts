@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { exec, spawn } from "child_process";
+import { exec } from "child_process";
 import chokidar from "chokidar";
 import express from "express";
 import fs from "fs-extra";
@@ -479,9 +479,11 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
   const watchPaths: string[] = [];
   const blocksDir = path.join(process.cwd(), "blocks");
   const templatesDir = path.join(process.cwd(), "templates");
+  const stylesDir = path.join(process.cwd(), "styles");
 
   if (fs.existsSync(blocksDir)) watchPaths.push(blocksDir);
   if (fs.existsSync(templatesDir)) watchPaths.push(templatesDir);
+  if (fs.existsSync(stylesDir)) watchPaths.push(stylesDir);
 
   console.log(chalk.gray(`\nSetting up watcher for:`));
   watchPaths.forEach((p) => console.log(chalk.gray(`  ${p}`)));
@@ -526,6 +528,43 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
       return;
     }
 
+    // Check if it's a styles/ folder change (e.g., main.css)
+    const pathParts = filepath.split(path.sep);
+    if (pathParts.includes("styles")) {
+      console.log(
+        chalk.blue(`🎨 Styles changed, rebuilding all resources...`)
+      );
+
+      // Rebuild ALL resources since they may import from styles/
+      for (const resource of resources) {
+        console.log(chalk.blue(`   ♻  Rebuilding ${resource.name}...`));
+        await buildResource(resource, devDir, {
+          framework: config.framework,
+          minify: false,
+          sourcemap: true,
+          outputMode: "flat",
+          generatePackageJson: false,
+          generateTypes: false,
+          strict: false,
+        });
+      }
+      console.log(chalk.green(`✓ All resources rebuilt\n`));
+
+      // Notify SSE clients to reload
+      sseClients.forEach((client) => {
+        try {
+          client.write(`data: ${JSON.stringify({
+            type: "reload",
+            block: "all",
+            stylesChanged: true
+          })}\n\n`);
+        } catch (error) {
+          // Client disconnected
+        }
+      });
+      return;
+    }
+
     // Check if it's a block.config.ts file
     if (filepath.endsWith("block.config.ts")) {
       console.log(
@@ -536,7 +575,6 @@ function setupWatcher(resources: Resource[], config: any, sseClients: any[]) {
     }
 
     // Extract resource name from path (e.g., "blocks/hero/src/Hero.tsx" -> "hero")
-    const pathParts = filepath.split(path.sep);
     const blockOrTemplateIndex =
       pathParts.indexOf("blocks") !== -1
         ? pathParts.indexOf("blocks")
@@ -636,7 +674,12 @@ async function executePublish(
   publishTasks: Map<string, any>
 ) {
   const task = publishTasks.get(taskId);
-  if (!task) return;
+  if (!task) {
+    console.error("[DEV] Task not found:", taskId);
+    return;
+  }
+
+  console.log("[DEV] Starting executePublish for task:", taskId);
 
   try {
     // Update: Building
@@ -649,17 +692,18 @@ async function executePublish(
     });
 
     // Build command args
-    let args = ["publish", resource.name, `--${target}`];
+    const args = ["publish", resource.name, `--${target}`];
 
     if (target === "workspace" && workspaceId) {
       args.push(workspaceId);
     }
 
-    if (versionBump) {
+    if (versionBump && versionBump !== "none") {
+      // User selected patch, minor, or major
       args.push(`--${versionBump}`);
     } else {
-      // Default to patch version bump to avoid interactive prompt
-      args.push("--patch");
+      // No version bump - publish current version
+      args.push("--no-bump");
     }
 
     task.steps[task.steps.length - 1].status = "completed";
@@ -670,9 +714,6 @@ async function executePublish(
     });
     task.progress = 30;
 
-    // Execute cmssy publish command (use global CLI)
-    const command = `cmssy ${args.join(" ")}`;
-
     task.steps[task.steps.length - 1].status = "completed";
     task.steps.push({
       step: "publishing",
@@ -681,53 +722,43 @@ async function executePublish(
     });
     task.progress = 50;
 
-    // Execute command with timeout using spawn for real-time stdout
+    // Execute command with timeout using exec (more reliable than spawn for CLI commands)
     const PUBLISH_TIMEOUT_MS = 180000; // 3 minutes
+    const command = `cmssy ${args.join(" ")}`;
+
+    console.log("[DEV] Executing publish command:", command);
 
     const execPromise = new Promise<void>((resolve, reject) => {
-      const child = spawn("cmssy", args, {
+      exec(command, {
         cwd: process.cwd(),
-        stdio: "pipe",
-      });
+        timeout: PUBLISH_TIMEOUT_MS,
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large outputs
+      }, (error, stdout, stderr) => {
+        // Log output for debugging
+        if (stdout) {
+          stdout.split("\n").forEach((line) => {
+            if (line.trim()) console.log("[PUBLISH]", line);
+          });
+        }
+        if (stderr) {
+          stderr.split("\n").forEach((line) => {
+            if (line.trim()) console.log("[PUBLISH]", line);
+          });
+        }
 
-      let stderr = "";
-
-      child.stdout?.on("data", (data) => {
-        console.log("[PUBLISH]", data.toString().trim());
-      });
-
-      child.stderr?.on("data", (data) => {
-        const msg = data.toString().trim();
-        stderr += msg + "\n";
-        console.error("[PUBLISH ERROR]", msg);
-      });
-
-      child.on("close", (code) => {
-        if (code !== 0) {
-          reject(new Error(stderr || `Publish exited with code ${code}`));
+        if (error) {
+          console.error("[DEV] Publish command failed:", error.message);
+          reject(new Error(stderr || error.message));
         } else {
+          console.log("[DEV] Publish command completed successfully");
           resolve();
         }
       });
-
-      child.on("error", (error) => {
-        reject(error);
-      });
     });
 
-    const timeoutPromise = new Promise<void>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(
-          "Publish timed out after 3 minutes. This may be due to:\n" +
-          "  - Large bundle size (check bundleSourceCode)\n" +
-          "  - Tailwind CSS compilation hanging\n" +
-          "  - Backend not responding\n" +
-          "Check console logs for details."
-        ));
-      }, PUBLISH_TIMEOUT_MS);
-    });
+    await execPromise;
 
-    await Promise.race([execPromise, timeoutPromise]);
+    console.log("[DEV] Updating task status to completed");
 
     task.steps[task.steps.length - 1].status = "completed";
     task.progress = 100;
@@ -740,7 +771,10 @@ async function executePublish(
           ? "Submitted for review. You'll be notified when approved."
           : "Published to workspace successfully!",
     });
+
+    console.log("[DEV] Task completed:", JSON.stringify(task));
   } catch (error: any) {
+    console.error("[DEV] executePublish error:", error);
     task.status = "failed";
     task.error = error.message;
     if (task.steps.length > 0) {
@@ -751,6 +785,7 @@ async function executePublish(
       status: "failed",
       message: `Error: ${error.message}`,
     });
+    console.log("[DEV] Task failed:", JSON.stringify(task));
   }
 }
 

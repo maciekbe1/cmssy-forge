@@ -6,20 +6,14 @@ import ora from "ora";
 import path from "path";
 import { generateTypes } from "../utils/type-generator.js";
 
-interface InitOptions {
-  framework: string;
-}
-
 interface InitAnswers {
   projectName: string;
-  framework: string;
-  useTailwind: boolean;
   authorName: string;
   authorEmail: string;
   initGit: boolean;
 }
 
-export async function initCommand(name?: string, options?: InitOptions) {
+export async function initCommand(name?: string) {
   console.log(chalk.blue.bold("\n🔨 Cmssy - Initialize Project\n"));
 
   const answers = await inquirer.prompt<InitAnswers>([
@@ -32,25 +26,6 @@ export async function initCommand(name?: string, options?: InitOptions) {
         if (/^[a-z0-9-_]+$/.test(input)) return true;
         return "Project name must contain only lowercase letters, numbers, hyphens, and underscores";
       },
-    },
-    {
-      type: "list",
-      name: "framework",
-      message: "Framework:",
-      choices: [
-        { name: "React", value: "react" },
-        { name: "Vue", value: "vue" },
-        { name: "Angular", value: "angular" },
-        { name: "Svelte", value: "svelte" },
-        { name: "Vanilla JS", value: "vanilla" },
-      ],
-      default: options?.framework || "react",
-    },
-    {
-      type: "confirm",
-      name: "useTailwind",
-      message: "Use Tailwind CSS v4?",
-      default: true,
     },
     {
       type: "input",
@@ -74,7 +49,6 @@ export async function initCommand(name?: string, options?: InitOptions) {
 
   const projectPath = path.join(process.cwd(), answers.projectName);
 
-  // Check if directory exists
   if (fs.existsSync(projectPath)) {
     console.error(
       chalk.red(`\n✖ Directory "${answers.projectName}" already exists\n`)
@@ -89,15 +63,15 @@ export async function initCommand(name?: string, options?: InitOptions) {
     fs.mkdirSync(projectPath, { recursive: true });
 
     // Create directory structure
-    const dirs = ["blocks", "templates", "public", ".cmssy"];
-
+    const dirs = ["blocks", "templates", "public", "styles", ".cmssy"];
     dirs.forEach((dir) => {
       fs.mkdirSync(path.join(projectPath, dir), { recursive: true });
     });
 
     // Create cmssy.config.js
     const config = {
-      framework: answers.framework,
+      framework: "react",
+      projectName: answers.projectName,
       author: {
         name: answers.authorName,
         email: answers.authorEmail,
@@ -115,7 +89,7 @@ export async function initCommand(name?: string, options?: InitOptions) {
     );
 
     // Create package.json
-    const packageJson: any = {
+    const packageJson = {
       name: answers.projectName,
       version: "1.0.0",
       type: "module",
@@ -123,70 +97,55 @@ export async function initCommand(name?: string, options?: InitOptions) {
         dev: "cmssy dev",
         build: "cmssy build",
       },
-      dependencies: {},
-      devDependencies: {},
-    };
-
-    // Add Tailwind CSS v4 if selected
-    if (answers.useTailwind) {
-      packageJson.devDependencies = {
-        ...packageJson.devDependencies,
+      dependencies: {
+        react: "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
+      devDependencies: {
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        typescript: "^5.7.2",
         tailwindcss: "^4.0.0",
         "@tailwindcss/postcss": "^4.0.0",
         postcss: "^8.4.49",
         "postcss-cli": "^11.0.0",
-      };
-    }
-
-    // Add framework-specific dependencies
-    if (answers.framework === "react") {
-      packageJson.dependencies = {
-        react: "^19.2.3",
-        "react-dom": "^19.2.3",
-      };
-      packageJson.devDependencies = {
-        ...packageJson.devDependencies,
-        "@types/react": "^19.2.7",
-        "@types/react-dom": "^19",
-        typescript: "^5.7.2",
-      };
-    }
+        "postcss-import": "^16.1.0",
+      },
+    };
 
     fs.writeFileSync(
       path.join(projectPath, "package.json"),
       JSON.stringify(packageJson, null, 2) + "\n"
     );
 
-    // Create tsconfig.json for React projects
-    if (answers.framework === "react") {
-      const tsConfig = {
-        compilerOptions: {
-          target: "ES2020",
-          module: "ESNext",
-          lib: ["ES2020", "DOM", "DOM.Iterable"],
-          jsx: "react-jsx",
-          moduleResolution: "bundler",
-          allowImportingTsExtensions: true,
-          resolveJsonModule: true,
-          isolatedModules: true,
-          noEmit: true,
-          strict: true,
-          skipLibCheck: true,
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          forceConsistentCasingInFileNames: true,
-          paths: {
-            "cmssy-cli/config": ["./node_modules/cmssy-cli/config"],
-          },
+    // Create tsconfig.json
+    const tsConfig = {
+      compilerOptions: {
+        target: "ES2020",
+        module: "ESNext",
+        lib: ["ES2020", "DOM", "DOM.Iterable"],
+        jsx: "react-jsx",
+        moduleResolution: "bundler",
+        allowImportingTsExtensions: true,
+        resolveJsonModule: true,
+        isolatedModules: true,
+        noEmit: true,
+        strict: true,
+        skipLibCheck: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        forceConsistentCasingInFileNames: true,
+        paths: {
+          "cmssy-cli/config": ["./node_modules/cmssy-cli/config"],
         },
-        include: ["blocks/**/*", "templates/**/*"],
-        exclude: ["node_modules", "dist", "public"],
-      };
-      fs.writeFileSync(
-        path.join(projectPath, "tsconfig.json"),
-        JSON.stringify(tsConfig, null, 2) + "\n"
-      );
-    }
+      },
+      include: ["blocks/**/*", "templates/**/*"],
+      exclude: ["node_modules", "dist", "public"],
+    };
+    fs.writeFileSync(
+      path.join(projectPath, "tsconfig.json"),
+      JSON.stringify(tsConfig, null, 2) + "\n"
+    );
 
     // Create .gitignore
     const gitignore = `node_modules/
@@ -195,20 +154,47 @@ public/
 .env
 .DS_Store
 *.log
-.cmssy/cache/
+.cmssy
 `;
     fs.writeFileSync(path.join(projectPath, ".gitignore"), gitignore);
 
-    // Create postcss.config.js for Tailwind v4 if selected
-    if (answers.useTailwind) {
-      const postcssConfig = `export default {
+    // Create postcss.config.js
+    const postcssConfig = `export default {
   plugins: {
-    '@tailwindcss/postcss': {},
+    "postcss-import": {
+      path: ["styles"],
+    },
+    "@tailwindcss/postcss": {},
   },
 };
 `;
-      fs.writeFileSync(path.join(projectPath, "postcss.config.js"), postcssConfig);
-    }
+    fs.writeFileSync(path.join(projectPath, "postcss.config.js"), postcssConfig);
+
+    // Create styles/main.css
+    const mainCss = `@import "tailwindcss";
+
+/* Set default border color (Tailwind v4 reset uses currentColor) */
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border, currentColor);
+  }
+}
+
+/* Custom theme - customize your design system here */
+/* @theme inline {
+  --color-primary: var(--primary);
+  --color-border: var(--border);
+} */
+
+/* CSS variables for theming */
+/* :root {
+  --primary: oklch(0.6 0.25 292);
+  --border: oklch(0.9 0 0);
+} */
+`;
+    fs.writeFileSync(path.join(projectPath, "styles", "main.css"), mainCss);
 
     // Create .env.example
     const envExample = `# Cmssy API Configuration
@@ -218,11 +204,9 @@ public/
 CMSSY_API_URL=https://api.cmssy.io/graphql
 
 # Cmssy API Token (get from Dashboard → API Tokens)
-# Required scopes: marketplace:publish (for marketplace) or workspace:write (for workspace)
 CMSSY_API_TOKEN=
 
-# Workspace ID (optional, for workspace publish)
-# Get from Dashboard → Workspace Settings
+# Workspace ID (for workspace publish)
 CMSSY_WORKSPACE_ID=
 `;
     fs.writeFileSync(path.join(projectPath, ".env.example"), envExample);
@@ -230,134 +214,54 @@ CMSSY_WORKSPACE_ID=
     // Create README.md
     const readme = `# ${answers.projectName}
 
-Cmssy project for building reusable UI blocks and templates.
+Cmssy project for building reusable UI blocks.
 
 ## Getting Started
 
 \`\`\`bash
-# Install dependencies
 npm install
-
-# Start development server with hot reload (defaults to http://localhost:3000)
 npm run dev
-
-# Or specify a custom port
-cmssy dev -p 3002
-
-# Create a new block
-cmssy create block my-block
-
-# Build for production
-npm run build
 \`\`\`
 
-## Available Commands
-
-### Development
-\`\`\`bash
-# Start dev server with preview UI (uses npm script)
-npm run dev
-
-# Create a new block
-cmssy create block <name>
-
-# Create a new page template
-cmssy create template <name>
-
-# Build all blocks and templates (uses npm script)
-npm run build
-\`\`\`
-
-### Publishing
+## Commands
 
 \`\`\`bash
-# Configure API credentials (run once)
-cmssy configure
-
-# MARKETPLACE PUBLISH (public, requires review)
-cmssy publish hero --marketplace                 # single block
-cmssy publish hero pricing --marketplace         # multiple blocks
-cmssy publish --all --marketplace                # all blocks/templates
-cmssy publish hero --marketplace --patch         # with version bump
-
-# WORKSPACE PUBLISH (private, no review)
-cmssy publish hero --workspace ws_abc123         # explicit workspace ID
-cmssy publish --all --workspace                  # uses CMSSY_WORKSPACE_ID from .env
-cmssy publish hero -w ws_abc123 --minor          # with version bump
-
-# Preview what would be published
-cmssy publish --all --marketplace --dry-run
-\`\`\`
-
-### Syncing from Marketplace
-\`\`\`bash
-# Pull a specific block from marketplace
-cmssy sync @vendor/blocks.hero --workspace ws_abc123
-
-# Pull all installed packages
-cmssy sync --workspace ws_abc123
+cmssy dev                    # Start dev server
+cmssy create block <name>    # Create new block
+cmssy build                  # Build for production
+cmssy publish --workspace    # Publish to workspace
 \`\`\`
 
 ## Project Structure
 
 \`\`\`
 ${answers.projectName}/
-├── blocks/              # Your UI blocks
-│   └── hero/
-│       ├── src/
-│       │   ├── index.tsx
-│       │   ├── Hero.tsx
-│       │   └── index.css
-│       ├── package.json
-│       └── preview.json
-├── templates/           # Your page templates
-├── public/              # Build output
-├── cmssy.config.js      # Project configuration
-├── .env                 # API credentials (created by configure)
-└── .env.example         # API credentials template
+├── blocks/           # Your UI blocks
+├── styles/
+│   └── main.css      # Global Tailwind styles
+├── public/           # Build output
+└── cmssy.config.js
 \`\`\`
-
-## Configuration
-
-Edit \`cmssy.config.js\` to customize:
-- Framework (${answers.framework})
-- Author information
-- Build settings
-
-## Framework
-
-- ${answers.framework}
-
-## Author
-
-- ${answers.authorName} ${answers.authorEmail ? `<${answers.authorEmail}>` : ""}
-
-## Documentation
-
-For more information, visit: https://cmssy.io/docs
 `;
     fs.writeFileSync(path.join(projectPath, "README.md"), readme);
 
     spinner.succeed("Project structure created");
 
-    // Create example block
+    // Create example hero block
     spinner.start("Creating example hero block...");
 
-    const exampleBlockPath = path.join(projectPath, "blocks", "hero");
-    fs.mkdirSync(exampleBlockPath, { recursive: true });
-    fs.mkdirSync(path.join(exampleBlockPath, "src"), { recursive: true });
+    const heroBlockPath = path.join(projectPath, "blocks", "hero");
+    fs.mkdirSync(path.join(heroBlockPath, "src"), { recursive: true });
 
-    if (answers.framework === "react") {
-      // Create React example with or without Tailwind
-      const heroComponent = answers.useTailwind
-        ? `import { BlockContent } from './block';
+    // Hero.tsx
+    const heroComponent = `import { BlockContent } from "./block";
 
 export default function Hero({ content }: { content: BlockContent }) {
   const {
-    heading = 'Welcome to Cmssy',
-    subheading = 'Build reusable UI blocks with any framework',
-    ctaText = 'Get Started',
-    ctaUrl = '#',
+    heading = "Welcome to Cmssy",
+    subheading = "Build reusable UI blocks with React & Tailwind",
+    ctaText = "Get Started",
+    ctaUrl = "#",
   } = content;
 
   return (
@@ -375,44 +279,21 @@ export default function Hero({ content }: { content: BlockContent }) {
     </section>
   );
 }
-`
-        : `import { BlockContent } from './block';
-
-export default function Hero({ content }: { content: BlockContent }) {
-  const {
-    heading = 'Welcome to Cmssy',
-    subheading = 'Build reusable UI blocks with any framework',
-    ctaText = 'Get Started',
-    ctaUrl = '#',
-  } = content;
-
-  return (
-    <section className="hero">
-      <div className="hero-content">
-        <h1>{heading}</h1>
-        <p>{subheading}</p>
-        <a href={ctaUrl} className="cta-button">
-          {ctaText}
-        </a>
-      </div>
-    </section>
-  );
-}
 `;
-      fs.writeFileSync(
-        path.join(exampleBlockPath, "src", "Hero.tsx"),
-        heroComponent
-      );
+    fs.writeFileSync(path.join(heroBlockPath, "src", "Hero.tsx"), heroComponent);
 
-      const indexFile = `import React from 'react';
-import { createRoot, Root } from 'react-dom/client';
-import Hero from './Hero';
+    // index.tsx
+    const indexFile = `import { createRoot, Root } from "react-dom/client";
+import Hero from "./Hero";
+import "./index.css";
 
 interface BlockContext {
   root: Root;
 }
 
 export default {
+  __component: Hero,
+
   mount(element: HTMLElement, props: any): BlockContext {
     const root = createRoot(element);
     root.render(<Hero content={props} />);
@@ -420,65 +301,23 @@ export default {
   },
 
   update(_element: HTMLElement, props: any, ctx: BlockContext): void {
-    // Re-render with new props (no unmount = no blink!)
     ctx.root.render(<Hero content={props} />);
   },
 
   unmount(_element: HTMLElement, ctx: BlockContext): void {
     ctx.root.unmount();
-  }
+  },
 };
 `;
-      fs.writeFileSync(
-        path.join(exampleBlockPath, "src", "index.tsx"),
-        indexFile
-      );
-    }
+    fs.writeFileSync(path.join(heroBlockPath, "src", "index.tsx"), indexFile);
 
-    const cssFile = answers.useTailwind
-      ? `@import "tailwindcss";
-`
-      : `.hero {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  text-align: center;
-}
+    // index.css
+    fs.writeFileSync(
+      path.join(heroBlockPath, "src", "index.css"),
+      `@import "main.css";\n`
+    );
 
-.hero-content h1 {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  font-weight: bold;
-}
-
-.hero-content p {
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
-}
-
-.cta-button {
-  display: inline-block;
-  padding: 1rem 2rem;
-  background: white;
-  color: #667eea;
-  text-decoration: none;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  transition: transform 0.2s;
-}
-
-.cta-button:hover {
-  transform: scale(1.05);
-}
-`;
-    fs.writeFileSync(path.join(exampleBlockPath, "src", "index.css"), cssFile);
-
-    // Create minimal package.json for block
+    // package.json
     const blockPackageJson = {
       name: `@${answers.projectName}/blocks.hero`,
       version: "1.0.0",
@@ -488,91 +327,68 @@ export default {
         email: answers.authorEmail,
       },
     };
-
     fs.writeFileSync(
-      path.join(exampleBlockPath, "package.json"),
+      path.join(heroBlockPath, "package.json"),
       JSON.stringify(blockPackageJson, null, 2) + "\n"
     );
 
-    // Create block.config.ts
-    const blockConfigContent = `import { defineBlock } from 'cmssy-cli/config';
+    // block.config.ts
+    const blockConfig = `import { defineBlock } from "cmssy-cli/config";
 
 export default defineBlock({
-  name: 'Hero Section',
-  description: 'Hero section block with heading and CTA button',
-  category: 'marketing',
-  tags: ['hero', 'landing', 'cta'],
+  name: "Hero Section",
+  description: "Hero section with heading and CTA",
+  category: "marketing",
+  tags: ["hero", "landing", "cta"],
 
   schema: {
     heading: {
-      type: 'singleLine',
-      label: 'Main Heading',
-      defaultValue: 'Welcome to Cmssy',
+      type: "singleLine",
+      label: "Heading",
+      defaultValue: "Welcome to Cmssy",
     },
     subheading: {
-      type: 'singleLine',
-      label: 'Subheading',
-      defaultValue: 'Build reusable UI blocks with any framework',
+      type: "singleLine",
+      label: "Subheading",
+      defaultValue: "Build reusable UI blocks with React & Tailwind",
     },
     ctaText: {
-      type: 'singleLine',
-      label: 'CTA Button Text',
-      defaultValue: 'Get Started',
+      type: "singleLine",
+      label: "CTA Text",
+      defaultValue: "Get Started",
     },
     ctaUrl: {
-      type: 'link',
-      label: 'CTA Button URL',
-      defaultValue: '#',
+      type: "link",
+      label: "CTA URL",
+      defaultValue: "#",
     },
   },
 
-  pricing: { licenseType: 'free' },
+  pricing: { licenseType: "free" },
 });
 `;
+    fs.writeFileSync(path.join(heroBlockPath, "block.config.ts"), blockConfig);
 
-    fs.writeFileSync(
-      path.join(exampleBlockPath, "block.config.ts"),
-      blockConfigContent
-    );
-
-    // Create preview.json for dev server
+    // preview.json
     const previewData = {
       heading: "Welcome to Cmssy",
-      subheading: "Build reusable UI blocks with any framework",
+      subheading: "Build reusable UI blocks with React & Tailwind",
       ctaText: "Get Started",
       ctaUrl: "#",
     };
-
     fs.writeFileSync(
-      path.join(exampleBlockPath, "preview.json"),
+      path.join(heroBlockPath, "preview.json"),
       JSON.stringify(previewData, null, 2) + "\n"
     );
 
-    // Generate types for hero block
+    // Generate types
     const heroSchema = {
-      heading: {
-        type: "singleLine" as const,
-        label: "Main Heading",
-        defaultValue: "Welcome to Cmssy",
-      },
-      subheading: {
-        type: "singleLine" as const,
-        label: "Subheading",
-        defaultValue: "Build reusable UI blocks with any framework",
-      },
-      ctaText: {
-        type: "singleLine" as const,
-        label: "CTA Button Text",
-        defaultValue: "Get Started",
-      },
-      ctaUrl: {
-        type: "link" as const,
-        label: "CTA Button URL",
-        defaultValue: "#",
-      },
+      heading: { type: "singleLine" as const, label: "Heading", defaultValue: "Welcome to Cmssy" },
+      subheading: { type: "singleLine" as const, label: "Subheading", defaultValue: "Build reusable UI blocks" },
+      ctaText: { type: "singleLine" as const, label: "CTA Text", defaultValue: "Get Started" },
+      ctaUrl: { type: "link" as const, label: "CTA URL", defaultValue: "#" },
     };
-
-    await generateTypes(exampleBlockPath, heroSchema);
+    await generateTypes(heroBlockPath, heroSchema);
 
     spinner.succeed("Example hero block created");
 
@@ -585,13 +401,11 @@ export default defineBlock({
       spinner.succeed("Git repository initialized");
     }
 
-    // Success message
     console.log(chalk.green.bold("\n✓ Project created successfully!\n"));
     console.log(chalk.cyan("Next steps:\n"));
     console.log(chalk.white(`  cd ${answers.projectName}`));
     console.log(chalk.white("  npm install"));
-    console.log(chalk.white("  npm run dev"));
-    console.log(chalk.gray("\nHappy building! 🔨\n"));
+    console.log(chalk.white("  npm run dev\n"));
   } catch (error) {
     spinner.fail("Failed to create project");
     console.error(chalk.red("\nError:"), error);

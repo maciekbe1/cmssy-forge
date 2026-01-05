@@ -89,6 +89,7 @@ program
   .option("--patch", "Bump patch version (1.0.0 -> 1.0.1)")
   .option("--minor", "Bump minor version (1.0.0 -> 1.1.0)")
   .option("--major", "Bump major version (1.0.0 -> 2.0.0)")
+  .option("--no-bump", "Publish without version bump")
   .option("--dry-run", "Preview what would be published without uploading")
   .action(publishCommand);
 

@@ -20,6 +20,9 @@ async function createBlock(name: string) {
       process.exit(1);
     }
 
+    // Stop spinner before prompting (ora can interfere with inquirer stdin)
+    spinner.stop();
+
     // Prompt for block details
     const answers = await inquirer.prompt([
       {
@@ -62,6 +65,9 @@ async function createBlock(name: string) {
       },
     ]);
 
+    // Restart spinner for file creation
+    spinner.start("Creating block files...");
+
     // Create directory structure
     fs.mkdirSync(path.join(blockPath, "src"), { recursive: true });
 
@@ -89,43 +95,42 @@ export default function ${componentName}({ content }: { content: BlockContent })
         componentFile
       );
 
-      // Create index file with __component pattern (SSR + interactivity support)
-      // The __component field is used for server-side rendering
-      // mount/update/unmount are optional and only needed for client-side interactivity
-      const indexFile = `import React from 'react';
-import { createRoot, Root } from 'react-dom/client';
-import ${componentName} from './${componentName}';
-import './index.css';
+      // Create index file with __component for SSR + mount/update/unmount for client
+      const indexFile = `import { createRoot, Root } from "react-dom/client";
+import ${componentName} from "./${componentName}";
+import "./index.css";
 
 interface BlockContext {
   root: Root;
 }
 
 export default {
-  // React component for SSR (used by renderToString)
   __component: ${componentName},
 
-  // Client-side lifecycle methods (optional, uncomment if you need interactivity)
-  // mount(element: HTMLElement, props: any): BlockContext {
-  //   const root = createRoot(element);
-  //   root.render(<${componentName} content={props} />);
-  //   return { root };
-  // },
+  mount(element: HTMLElement, props: any): BlockContext {
+    const root = createRoot(element);
+    root.render(<${componentName} content={props} />);
+    return { root };
+  },
 
-  // update(_element: HTMLElement, props: any, ctx: BlockContext): void {
-  //   ctx.root.render(<${componentName} content={props} />);
-  // },
+  update(_element: HTMLElement, props: any, ctx: BlockContext): void {
+    ctx.root.render(<${componentName} content={props} />);
+  },
 
-  // unmount(_element: HTMLElement, ctx: BlockContext): void {
-  //   ctx.root.unmount();
-  // }
+  unmount(_element: HTMLElement, ctx: BlockContext): void {
+    ctx.root.unmount();
+  },
 };
 `;
       fs.writeFileSync(path.join(blockPath, "src", "index.tsx"), indexFile);
     }
 
-    // Create CSS file
-    const cssFile = `.${name} {
+    // Create CSS file (with main.css import if project uses Tailwind)
+    const hasTailwind = fs.existsSync(path.join(process.cwd(), "postcss.config.js"));
+    const cssFile = hasTailwind
+      ? `@import "main.css";
+`
+      : `.${name} {
   padding: 2rem;
 }
 
@@ -239,6 +244,9 @@ async function createPage(name: string) {
       process.exit(1);
     }
 
+    // Stop spinner before prompting (ora can interfere with inquirer stdin)
+    spinner.stop();
+
     const answers = await inquirer.prompt([
       {
         type: "input",
@@ -253,6 +261,9 @@ async function createPage(name: string) {
         default: "",
       },
     ]);
+
+    // Restart spinner for file creation
+    spinner.start("Creating page files...");
 
     fs.mkdirSync(path.join(pagePath, "src"), { recursive: true });
 

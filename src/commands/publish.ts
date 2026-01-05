@@ -21,6 +21,7 @@ interface PublishOptions {
   patch?: boolean;
   minor?: boolean;
   major?: boolean;
+  bump?: boolean; // --no-bump sets this to false
   dryRun?: boolean;
   all?: boolean;
 }
@@ -124,7 +125,11 @@ export async function publishCommand(
   // Version bumping - interactive or from flags
   let bumpType: "patch" | "minor" | "major" | null = null;
 
-  if (options.patch || options.minor || options.major) {
+  // --no-bump flag explicitly disables version bump
+  if (options.bump === false) {
+    bumpType = null;
+    console.log(chalk.gray("Version bump disabled (--no-bump)\n"));
+  } else if (options.patch || options.minor || options.major) {
     // Use flag-based bump
     bumpType = options.patch ? "patch" : options.minor ? "minor" : "major";
   } else {
@@ -254,34 +259,51 @@ export async function publishCommand(
       }
       successCount++;
     } catch (error: any) {
-      spinner.fail(chalk.red(`${pkg.packageJson.name} failed`));
+      spinner.fail(chalk.red(`✖ ${pkg.packageJson.name} failed`));
 
       // Extract detailed error information from GraphQL errors
       let errorMessage = error.message || "Unknown error";
+      let errorCode: string | null = null;
+      let isPlanLimitError = false;
 
       // graphql-request wraps errors in response.errors array
       if (error.response?.errors && error.response.errors.length > 0) {
         const graphqlError = error.response.errors[0];
         errorMessage = graphqlError.message;
-
-        // Show error code if available (e.g., PLAN_LIMIT_EXCEEDED, VALIDATION_ERROR)
-        if (graphqlError.extensions?.code) {
-          errorMessage += chalk.gray(` [${graphqlError.extensions.code}]`);
-        }
+        errorCode = graphqlError.extensions?.code || null;
+        isPlanLimitError = errorCode === "PLAN_LIMIT_EXCEEDED" ||
+                           errorMessage.toLowerCase().includes("limit reached");
 
         // Show additional details for plan limit errors
         if (graphqlError.extensions?.resource) {
-          console.error(chalk.yellow(`  Resource: ${graphqlError.extensions.resource}`));
+          console.error("");
+          console.error(chalk.yellow.bold("  ⚠ Plan Limit Reached"));
+          console.error(chalk.yellow(`    Resource: ${graphqlError.extensions.resource}`));
           if (graphqlError.extensions.current !== undefined) {
-            console.error(chalk.yellow(`  Current: ${graphqlError.extensions.current}/${graphqlError.extensions.limit}`));
+            console.error(chalk.yellow(`    Usage: ${graphqlError.extensions.current}/${graphqlError.extensions.limit}`));
           }
           if (graphqlError.extensions.plan) {
-            console.error(chalk.yellow(`  Plan: ${graphqlError.extensions.plan}`));
+            console.error(chalk.yellow(`    Plan: ${graphqlError.extensions.plan}`));
           }
+          console.error(chalk.gray("    Upgrade your plan at: https://cmssy.com/pricing"));
+          console.error("");
         }
       }
 
-      console.error(chalk.red(`  ${errorMessage}\n`));
+      // Show error message prominently
+      if (isPlanLimitError) {
+        console.error(chalk.red.bold(`  ${errorMessage}`));
+        if (errorCode) {
+          console.error(chalk.gray(`  Error code: ${errorCode}`));
+        }
+      } else {
+        console.error(chalk.red(`  Error: ${errorMessage}`));
+        if (errorCode) {
+          console.error(chalk.gray(`  Code: ${errorCode}`));
+        }
+      }
+      console.error("");
+
       errorCount++;
     }
   }
@@ -432,8 +454,8 @@ async function bundleSourceCode(packagePath: string): Promise<string> {
     platform: "browser", // Browser platform to avoid Node.js globals like 'process'
     jsx: "transform", // Transform JSX to React.createElement
     loader: { ".tsx": "tsx", ".ts": "ts", ".css": "empty" },
-    external: [], // Bundle everything (React included)
-    minify: false, // Keep code readable for debugging
+    external: ["react", "react-dom", "react/jsx-runtime"], // React provided by SSR sandbox / BlockRenderer scope
+    minify: true, // Minify for smaller bundle size
     define: {
       // Replace process.env references with static values
       'process.env.NODE_ENV': '"production"',
@@ -539,16 +561,25 @@ async function compileCss(packagePath: string, bundledSourceCode: string): Promi
     return cssContent;
   }
 
-  // Load PostCSS
+  // Load PostCSS from project
   const { default: postcss } = await import("postcss");
 
   // Check for Tailwind v4 vs v3
   const projectRoot = process.cwd();
+
+  // Load postcss-import from project's node_modules (ESM requires full path to index.js)
+  const postcssImportPath = path.join(projectRoot, "node_modules", "postcss-import", "index.js");
+  const { default: postcssImport } = await import(postcssImportPath);
   const projectPackageJson = fs.readJsonSync(path.join(projectRoot, "package.json"));
   const hasTailwindV4 = !!(
     projectPackageJson.devDependencies?.["@tailwindcss/postcss"] ||
     projectPackageJson.dependencies?.["@tailwindcss/postcss"]
   );
+
+  // Configure postcss-import to resolve from project's styles/ folder
+  const importPlugin = postcssImport({
+    path: [path.join(projectRoot, "styles")],
+  });
 
   let tailwindPlugin: any;
 
@@ -584,8 +615,8 @@ async function compileCss(packagePath: string, bundledSourceCode: string): Promi
     });
   }
 
-  // Process CSS
-  const result = await postcss([tailwindPlugin]).process(cssContent, {
+  // Process CSS with postcss-import FIRST, then Tailwind
+  const result = await postcss([importPlugin, tailwindPlugin]).process(cssContent, {
     from: cssPath,
   });
 
@@ -693,7 +724,6 @@ async function publishToWorkspace(
   apiToken: string,
   apiUrl: string
 ): Promise<void> {
-  console.log("[DEBUG] publishToWorkspace START");
   const { packageJson, path: packagePath, blockConfig } = pkg;
 
   // Use blockConfig if available, fallback to package.json cmssy
@@ -706,16 +736,12 @@ async function publishToWorkspace(
     .replace(/^blocks\./, "")
     .replace(/^templates\./, "");
 
-  console.log("[DEBUG] Starting bundleSourceCode...");
   // Bundle source code (combines all local imports)
   // Post-processing automatically adds __component for SSR if mount/update pattern detected
   const bundledSourceCode = await bundleSourceCode(packagePath);
-  console.log("[DEBUG] bundleSourceCode DONE");
 
-  console.log("[DEBUG] Starting compileCss...");
   // Compile CSS (with Tailwind if needed)
   const compiledCss = await compileCss(packagePath, bundledSourceCode);
-  console.log("[DEBUG] compileCss DONE");
 
   // Convert block.config.ts schema to schemaFields if using blockConfig
   let schemaFields = metadata.schemaFields || [];
@@ -753,10 +779,8 @@ async function publishToWorkspace(
   // Send mutation with timeout using Promise.race
   const TIMEOUT_MS = 180000; // 3 minutes
 
-  console.log("[DEBUG] Creating timeout promise...");
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {
-      console.log("[DEBUG] TIMEOUT FIRED!");
       reject(new Error(
         "Block upload timed out after 3 minutes. This may be due to:\n" +
         "  - Large file size (try reducing bundle size)\n" +
@@ -767,12 +791,8 @@ async function publishToWorkspace(
     }, TIMEOUT_MS);
   });
 
-  console.log("[DEBUG] Sending GraphQL request to:", apiUrl);
   const requestPromise = client.request(IMPORT_BLOCK_MUTATION, { input });
-
-  console.log("[DEBUG] Waiting for Promise.race...");
   const result = await Promise.race([requestPromise, timeoutPromise]);
-  console.log("[DEBUG] Promise.race RESOLVED!");
 
   if (!result.importBlock) {
     throw new Error("Failed to import block to workspace");

@@ -114,6 +114,8 @@ export async function buildResource(
       sourcemap,
       target: "es2020",
       loader: { ".css": "empty" }, // Ignore CSS imports (CSS is handled separately)
+      // Note: React is bundled for dev because browser ES modules can't resolve bare imports
+      // Production builds (publish.ts) externalize React since SSR/BlockRenderer provide it
     });
   } catch (error) {
     const message = `Build error for ${resource.name}`;
