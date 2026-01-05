@@ -89,13 +89,37 @@ export default function ${componentName}({ content }: { content: BlockContent })
         componentFile
       );
 
-      // Create index file with direct component export (SSR ready)
-      // For interactive blocks, set interactive: true in block.config.ts
-      // and CLI will auto-wrap with mount/update pattern during build
-      const indexFile = `import ${componentName} from './${componentName}';
+      // Create index file with __component pattern (SSR + interactivity support)
+      // The __component field is used for server-side rendering
+      // mount/update/unmount are optional and only needed for client-side interactivity
+      const indexFile = `import React from 'react';
+import { createRoot, Root } from 'react-dom/client';
+import ${componentName} from './${componentName}';
 import './index.css';
 
-export default ${componentName};
+interface BlockContext {
+  root: Root;
+}
+
+export default {
+  // React component for SSR (used by renderToString)
+  __component: ${componentName},
+
+  // Client-side lifecycle methods (optional, uncomment if you need interactivity)
+  // mount(element: HTMLElement, props: any): BlockContext {
+  //   const root = createRoot(element);
+  //   root.render(<${componentName} content={props} />);
+  //   return { root };
+  // },
+
+  // update(_element: HTMLElement, props: any, ctx: BlockContext): void {
+  //   ctx.root.render(<${componentName} content={props} />);
+  // },
+
+  // unmount(_element: HTMLElement, ctx: BlockContext): void {
+  //   ctx.root.unmount();
+  // }
+};
 `;
       fs.writeFileSync(path.join(blockPath, "src", "index.tsx"), indexFile);
     }
@@ -273,6 +297,10 @@ interface BlockContext {
 }
 
 export default {
+  // React component for SSR (used by renderToString)
+  __component: ${componentName},
+
+  // Client-side lifecycle methods (for interactivity)
   mount(element: HTMLElement, props: any): BlockContext {
     const root = createRoot(element);
     root.render(<${componentName} content={props} />);
