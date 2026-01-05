@@ -828,10 +828,8 @@ function convertSchemaToFields(schema: Record<string, any>): any[] {
     if (field.type === "repeater" && field.schema) {
       baseField.minItems = field.minItems;
       baseField.maxItems = field.maxItems;
-      baseField.itemSchema = {
-        type: "object",
-        fields: convertSchemaToFields(field.schema),
-      };
+      // Backend expects itemSchema to be a flat array of field definitions
+      baseField.itemSchema = convertSchemaToFields(field.schema);
     }
 
     fields.push(baseField);
