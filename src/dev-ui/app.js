@@ -361,23 +361,91 @@ function renderRepeaterField(key, field, items) {
   `;
 }
 
+// Get nested field definition from schema using dot notation path
+function getNestedFieldDefinition(key) {
+  const parts = key.split('.');
+  let fieldDef = null;
+  let schema = currentBlock.schema;
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+
+    // Skip numeric indices (they reference array items, not schema keys)
+    if (/^\d+$/.test(part)) {
+      continue;
+    }
+
+    if (schema && schema[part]) {
+      fieldDef = schema[part];
+      // If this is a repeater, its nested fields are in .schema
+      if (fieldDef.type === 'repeater' && fieldDef.schema) {
+        schema = fieldDef.schema;
+      }
+    } else {
+      return null;
+    }
+  }
+
+  return fieldDef;
+}
+
+// Get nested value from previewData using dot notation path
+function getNestedValue(key) {
+  const parts = key.split('.');
+  let value = previewData;
+
+  for (const part of parts) {
+    if (value === undefined || value === null) return undefined;
+    value = value[part];
+  }
+
+  return value;
+}
+
+// Set nested value in previewData using dot notation path
+function setNestedValue(key, newValue) {
+  const parts = key.split('.');
+  let obj = previewData;
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    const nextPart = parts[i + 1];
+
+    if (obj[part] === undefined) {
+      // Create array if next part is numeric, otherwise object
+      obj[part] = /^\d+$/.test(nextPart) ? [] : {};
+    }
+    obj = obj[part];
+  }
+
+  obj[parts[parts.length - 1]] = newValue;
+}
+
 // Add repeater item
 window.addRepeaterItem = function(key) {
-  const field = currentBlock.schema[key];
-  if (!field || !field.schema) return;
+  // Get field definition (supports nested paths like "plans.0.features")
+  const field = getNestedFieldDefinition(key);
+  if (!field || !field.schema) {
+    console.error('Could not find repeater field definition for:', key);
+    return;
+  }
 
-  // Get current items
-  const currentItems = previewData[key] || [];
+  // Get current items at the nested path
+  const currentItems = getNestedValue(key) || [];
 
-  // Create new empty item
+  // Create new empty item with defaults
   const newItem = {};
   Object.keys(field.schema).forEach(nestedKey => {
     const nestedField = field.schema[nestedKey];
-    newItem[nestedKey] = nestedField.defaultValue || '';
+    if (nestedField.type === 'repeater') {
+      newItem[nestedKey] = []; // Nested repeaters start empty
+    } else {
+      newItem[nestedKey] = nestedField.defaultValue !== undefined ? nestedField.defaultValue : '';
+    }
   });
 
-  // Add to preview data
-  previewData[key] = [...currentItems, newItem];
+  // Set the updated array at the nested path
+  setNestedValue(key, [...currentItems, newItem]);
 
   // Re-render editor and save
   renderEditor();
@@ -386,8 +454,14 @@ window.addRepeaterItem = function(key) {
 
 // Remove repeater item
 window.removeRepeaterItem = function(key, index) {
-  const currentItems = previewData[key] || [];
-  previewData[key] = currentItems.filter((_, i) => i !== index);
+  // Get current items at the nested path
+  const currentItems = getNestedValue(key) || [];
+
+  // Filter out the item at the given index
+  const newItems = currentItems.filter((_, i) => i !== index);
+
+  // Set the updated array at the nested path
+  setNestedValue(key, newItems);
 
   // Re-render editor and save
   renderEditor();
@@ -407,7 +481,6 @@ function attachFieldListeners() {
 function handleFieldChange(event) {
   const input = event.target;
   const fieldPath = input.dataset.field;
-  const field = fieldPath.split('.');
 
   let value;
   if (input.type === 'checkbox') {
@@ -418,18 +491,8 @@ function handleFieldChange(event) {
     value = input.value;
   }
 
-  // Handle nested fields (e.g., "items.0.name" or "image.url")
-  if (field.length === 1) {
-    previewData[field[0]] = value;
-  } else if (field.length === 2) {
-    if (!previewData[field[0]]) previewData[field[0]] = {};
-    previewData[field[0]][field[1]] = value;
-  } else if (field.length === 3) {
-    // Repeater item field
-    if (!previewData[field[0]]) previewData[field[0]] = [];
-    if (!previewData[field[0]][field[1]]) previewData[field[0]][field[1]] = {};
-    previewData[field[0]][field[1]][field[2]] = value;
-  }
+  // Use generic nested setter to handle any depth (supports nested repeaters)
+  setNestedValue(fieldPath, value);
 
   // Sync color picker with text input
   if (fieldPath.endsWith('-text')) {
